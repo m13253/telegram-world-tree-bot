@@ -117,6 +117,13 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if user_b == 0 {
+		if !IsOpenHour(time.Now()) {
+			quickReply(
+				"「世界树」\n" +
+				CLOSED_MSG,
+				bot, msg)
+			return
+		}
 		// Queue this user
 		_, err = db.Exec("INSERT INTO match VALUES (?, -1)", user_a)
 		if err != nil {
@@ -130,13 +137,6 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"戳 /leave 放弃排队。",
 			bot, msg)
 	} else {
-		if !IsOpenHour(time.Now()) {
-			quickReply(
-				"「世界树」\n" +
-				CLOSED_MSG,
-				bot, msg)
-			return
-		}
 		// Found a pending user_a
 		tx, err := db.Begin()
 		if err != nil {
