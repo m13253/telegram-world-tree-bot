@@ -258,6 +258,10 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		}
 		if msg.Audio != nil {
 			fwd := tgbotapi.NewAudioShare(user_b, msg.Audio.FileID)
+			fwd.Caption = msg.Caption
+			fwd.Duration = msg.Audio.Duration
+			fwd.Performer = msg.Audio.Performer
+			fwd.Title = msg.Audio.Title
 			_, err = bot.Send(fwd)
 			if err != nil {
 				replyErr(err, bot, msg)
@@ -273,6 +277,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		if msg.Photo != nil {
 			if len(*msg.Photo) != 0 {
 				fwd := tgbotapi.NewPhotoShare(user_b, (*msg.Photo)[0].FileID)
+				fwd.Caption = msg.Caption
 				_, err = bot.Send(fwd)
 				if err != nil {
 					replyErr(err, bot, msg)
@@ -288,6 +293,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		}
 		if msg.Video != nil {
 			fwd := tgbotapi.NewVideoShare(user_b, msg.Video.FileID)
+			fwd.Duration = msg.Video.Duration
+			fwd.Caption = msg.Caption
 			_, err = bot.Send(fwd)
 			if err != nil {
 				replyErr(err, bot, msg)
@@ -295,6 +302,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		}
 		if msg.Voice != nil {
 			fwd := tgbotapi.NewVoiceShare(user_b, msg.Voice.FileID)
+			fwd.Caption = msg.Caption
+			fwd.Duration = msg.Voice.Duration
 			_, err = bot.Send(fwd)
 			if err != nil {
 				replyErr(err, bot, msg)
