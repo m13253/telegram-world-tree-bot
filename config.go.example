@@ -1,0 +1,11 @@
+package main
+
+import "time"
+
+const SECRET = "MY_BOT_API_TOKEN"
+
+func IsOpenHour(t time.Time) bool {
+	utc := t.UTC()
+	return utc.Hour() >= 13 && utc.Hour() < 22
+}
+const CLOSED_MSG = "世界树只在每晚 21 点至次日 6 点之间开放。"
