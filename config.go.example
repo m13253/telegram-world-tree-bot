@@ -4,6 +4,8 @@ import "time"
 
 const SECRET = "MY_BOT_API_TOKEN"
 
+const DEBUG_MODE = false
+
 func IsOpenHour(t time.Time) bool {
 	utc := t.UTC()
 	return utc.Hour() >= 13 && utc.Hour() < 22

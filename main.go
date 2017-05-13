@@ -1,19 +1,19 @@
 /*
-    Telegram WorldTreeBot
-    Copyright (C) 2017 StarBrilliant <m13253@hotmail.com>
+	Telegram WorldTreeBot
+	Copyright (C) 2017 StarBrilliant <m13253@hotmail.com>
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
 
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
@@ -21,6 +21,7 @@ package main
 import (
 	"log"
 	"time"
+	"strings"
 	"database/sql"
 	"gopkg.in/telegram-bot-api.v4"
 	_ "github.com/mattn/go-sqlite3"
@@ -30,7 +31,7 @@ func main() {
 	db, err := sql.Open("sqlite3", "./bot.db")
 	checkErr(err)
 
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER UNIQUE, b INTEGER UNIQUE)")
+	err = createTables(db)
 	checkErr(err)
 
 	log.Println("Database initialized.")
@@ -48,11 +49,16 @@ func main() {
 		msg := update.Message
 		if msg != nil && msg.Chat.IsPrivate() {
 
-			if msg.Chat.LastName == "" {
-				log.Printf("[%s]: %s\n", msg.Chat.FirstName, msg.Text)
-			} else {
-				log.Printf("[%s %s]: %s\n", msg.Chat.FirstName, msg.Chat.LastName, msg.Text)
+			log_text := msg.Text
+			if !DEBUG_MODE && !strings.HasPrefix(msg.Text, "/") {
+				log_text = "(scrambled)"
 			}
+			if msg.Chat.LastName == "" {
+				log.Printf("[%s]: %s\n", msg.Chat.FirstName, log_text)
+			} else {
+				log.Printf("[%s %s]: %s\n", msg.Chat.FirstName, msg.Chat.LastName, log_text)
+			}
+
 			cmd := msg.Command()
 			if cmd == "start" {
 				handleStart(bot, db, msg)
@@ -74,6 +80,12 @@ func main() {
 				"由于这个限制，你无法使用消息编辑功能。",
 				bot, edit_msg)
 		}
+
+		query := update.CallbackQuery
+		if query != nil {
+			handleCallbackQuery(bot, db, query)
+		}
+
 	}
 }
 
@@ -88,21 +100,14 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
-	// Detect whether the user is already in queue or in a chat.
-	user_b, err := queryUserB(db, user_a)
+
+	// Detect whether the user is already in a chat.
+	user_b, err := queryUser(db, user_a)
 	if err != nil {
 		replyErr(err, bot, msg)
 		return
 	}
-	if user_b == -1 {
-		quickReply(
-			"「世界树」\n" +
-			"现在还找不到聊伴，已为你排队。\n" +
-			"在此期间，不妨去听听音乐？\n" +
-			"戳 /leave 放弃排队。",
-			bot, msg)
-		return
-	} else if user_b != 0 {
+	if user_b != 0 {
 		quickReply(
 			"「世界树」\n" +
 			"你正在一次会话中。\n" +
@@ -110,95 +115,187 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			bot, msg)
 		return
 	}
-	// Then, try to find anyone not paired.
-	user_b, err = queryUserA(db, -1)
-	if err != nil {
-		replyErr(err, bot, msg)
-		return
-	}
-	if user_b == 0 {
-		if !IsOpenHour(time.Now()) {
+
+	if !IsOpenHour(time.Now()) {
+		if !DEBUG_MODE {
 			quickReply(
 				"「世界树」\n" +
 				CLOSED_MSG,
 				bot, msg)
 			return
 		}
-		// Queue this user
-		_, err = db.Exec("INSERT INTO match VALUES (?, -1)", user_a)
+	}
+
+	// Cancel if the user is already in a queue.
+	err = cancelTopic(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+
+	// List topics for the user.
+	topics, err := listTopics(db)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	err = setChoosingStatus(db, user_a, true)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if len(topics) == 0 {
+		quickReply(
+			"「世界树」\n" +
+			"目前找不到聊伴。\n" +
+			"请输入你感兴趣的话题，我们会为你排队。",
+			bot, msg)
+	} else {
+		reply := tgbotapi.NewMessage(user_a,
+			"「世界树」\n" +
+			"以下的人希望与你交谈。\n" +
+			"点击你感兴趣的话题与他们聊天。\n" +
+			"你也可以输入你感兴趣的其它话题，我们会为你排队。")
+		keyboard := make([][]tgbotapi.InlineKeyboardButton, len(topics))
+		for i := range topics {
+			keyboard[i] = []tgbotapi.InlineKeyboardButton {
+				tgbotapi.InlineKeyboardButton {
+					Text: topics[i],
+					CallbackData: &topics[i],
+				},
+			}
+		}
+		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
+		_, err = bot.Send(reply)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.CallbackQuery) {
+	msg := query.Message
+	if msg == nil || !msg.Chat.IsPrivate() {
+		return
+	}
+	user_a := msg.Chat.ID
+
+	// Detect whether the user is already in a chat.
+	user_b, err := queryUser(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if user_b != 0 {
+		quickReply(
+			"「世界树」\n" +
+			"你正在一次会话中。\n" +
+			"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+			bot, msg)
+		return
+	}
+
+	err = setChoosingStatus(db, user_a, false)
+	if err != nil {
+		replyErr(err, bot, msg)
+	}
+
+	topic := query.Data
+	user_b, err = popTopic(db, topic)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if user_b == 0 {
+		// The topic has gone.
+		err = pushTopic(db, user_a, topic)
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
 		}
 		quickReply(
 			"「世界树」\n" +
-			"现在还找不到聊伴，已为你排队。\n" +
-			"在此期间，不妨去听听音乐？\n" +
-			"戳 /leave 放弃排队。",
+			"对方刚刚离开了，匹配失败。\n" +
+			"我们为你重新排队，请等待下一个志趣相投的人。\n" +
+			"也可以戳 /new 重新选择话题。",
 			bot, msg)
-	} else {
-		// Found a pending user_a
-		tx, err := db.Begin()
-		if err != nil {
-			replyErr(err, bot, msg)
-			return
-		}
-		_, err = tx.Exec("INSERT OR REPLACE INTO match VALUES (?, ?)", user_a, user_b)
-		if err != nil {
-			tx.Rollback()
-			replyErr(err, bot, msg)
-			return
-		}
-		_, err = tx.Exec("INSERT OR REPLACE INTO match VALUES (?, ?)", user_b, user_a)
-		if err != nil {
-			tx.Rollback()
-			replyErr(err, bot, msg)
-			return
-		}
-		err = tx.Commit()
-		if err != nil {
-			tx.Rollback()
-			replyErr(err, bot, msg)
-			return
-		}
-		const match_ok = "「世界树」\n" +
-			"已匹配到另一个聊伴，祝你们聊天愉快。\n" +
-			"戳 /leave 离开本次谈话。\n" +
-			"\n" +
-			"注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
-		reply := tgbotapi.NewMessage(user_a, match_ok)
-		bot.Send(reply)
-		reply = tgbotapi.NewMessage(user_b, match_ok)
-		_, err = bot.Send(reply)
-		replyErr(err, bot, msg)
+		return
 	}
-}
 
-func handleLeaveChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
-	user_a := msg.Chat.ID
-	// Detect whether the user is already in queue or in a chat.
-	user_b, err := queryUserB(db, user_a)
+	err = connectUser(db, user_a, user_b)
 	if err != nil {
 		replyErr(err, bot, msg)
 		return
 	}
+
+	match_ok := "「世界树」\n" +
+		"会话已接通，祝你们聊天愉快。\n" +
+		"话题：" + topic + "\n" +
+		"戳 /leave 离开本次谈话。\n" +
+		"\n" +
+		"注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+	reply := tgbotapi.NewMessage(user_a, match_ok)
+	bot.Send(reply)
+	reply = tgbotapi.NewMessage(user_b, match_ok)
+	_, err = bot.Send(reply)
+	replyErr(err, bot, msg)
+}
+
+func handleLeaveChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
+	user_a := msg.Chat.ID
+
+	// Detect choosing status.
+	choosing, err := getChoosingStatus(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if choosing {
+		setChoosingStatus(db, user_a, false)
+		if err != nil {
+			replyErr(err, bot, msg)
+			return
+		}
+		quickReply(
+			"「世界树」\n" +
+			"已放弃排队。",
+			bot, msg)
+		return
+	}
+
+	// Detect whether the user is already in queue.
+	ok, err := isUserInQueue(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if ok {
+		err := cancelTopic(db, user_a)
+		if err != nil {
+			replyErr(err, bot, msg)
+			return
+		}
+		quickReply(
+			"「世界树」\n" +
+			"已放弃排队。",
+			bot, msg)
+		return
+	}
+
+	// Detect whether the user is not in chat.
+	user_b, err := queryUser(db, user_a)
 	if user_b == 0 {
 		quickReply(
 			"「世界树」\n" +
 			"你现在不在会话中。\n" +
 			"要不要试试戳 /new 开始一段聊天？",
 			bot, msg)
-	} else if user_b == -1 {
-		_, err = db.Exec("DELETE FROM match WHERE a = ? OR b = ?", user_a, user_a)
-		replyErr(err, bot, msg)
-		quickReply(
-			"「世界树」\n" +
-			"已放弃排队。",
-			bot, msg)
 	} else {
-		// Terminate this dialog.
-		_, err = db.Exec("DELETE FROM match WHERE a = ? OR b = ?", user_a, user_a)
-		replyErr(err, bot, msg)
+		// Disconnect with the partnet
+		err = disconnectUser(db, user_a)
+		if err != nil {
+			replyErr(err, bot, msg)
+		}
 		quickReply(
 			"「世界树」\n" +
 			"本次谈话已结束。\n" +
@@ -215,7 +312,77 @@ func handleLeaveChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
-	user_b, err := queryUserB(db, user_a)
+
+	// Detect choosing status.
+	choosing, err := getChoosingStatus(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if choosing {
+		setChoosingStatus(db, user_a, false)
+		if err != nil {
+			replyErr(err, bot, msg)
+			return
+		}
+		topic := strings.TrimSpace(msg.Text)
+		user_b, err := popTopic(db, topic)
+		if err != nil {
+			replyErr(err, bot, msg)
+			return
+		}
+		if user_b == 0 {
+			// Push into topic queue
+			err = pushTopic(db, user_a, topic)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+			quickReply(
+				"「世界树」\n" +
+				"我们已为你排队 ，请等待下一个志趣相投的人，\n" +
+				"也可以戳 /new 重新选择话题。",
+				bot, msg)
+		} else {
+			// Connect 
+			err = connectUser(db, user_a, user_b)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+
+			match_ok := "「世界树」\n" +
+				"会话已接通，祝你们聊天愉快。\n" +
+				"话题：" + topic + "\n" +
+				"戳 /leave 离开本次谈话。\n" +
+				"\n" +
+				"注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+			reply := tgbotapi.NewMessage(user_a, match_ok)
+			bot.Send(reply)
+			reply = tgbotapi.NewMessage(user_b, match_ok)
+			_, err = bot.Send(reply)
+			replyErr(err, bot, msg)
+		}
+		return
+	}
+
+	// Detect whether the user is already in queue.
+	ok, err := isUserInQueue(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if ok {
+		quickReply(
+			"「世界树」\n" +
+			"我们已为你排队 ，请等待下一个志趣相投的人，\n" +
+			"也可以戳 /new 重新选择话题。",
+			bot, msg)
+		return
+	}
+
+	// Detect whether the user is not in chat.
+	user_b, err := queryUser(db, user_a)
 	if err != nil {
 		replyErr(err, bot, msg)
 		return
@@ -226,14 +393,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"你现在不在会话中。\n" +
 			"要不要试试戳 /new 开始一段聊天？",
 			bot, msg)
-	} else if user_b == -1 {
-		quickReply(
-			"「世界树」\n" +
-			"现在还找不到聊伴，已为你排队。\n" +
-			"在此期间，不妨去听听音乐？\n" +
-			"戳 /leave 放弃排队。",
-			bot, msg)
 	} else {
+		// Forward the message to the partner
 		if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
 			fwd := tgbotapi.NewForward(user_b, msg.Chat.ID, msg.MessageID)
 			_, err = bot.Send(fwd)
@@ -332,28 +493,6 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				replyErr(err, bot, msg)
 			}
 		}
-	}
-}
-
-func queryUserA(db *sql.DB, user_b int64) (user_a int64, err error) {
-	err = db.QueryRow("SELECT a FROM match WHERE b = ?", user_b).Scan(&user_a)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	} else {
-		return
-	}
-}
-
-func queryUserB(db *sql.DB, user_a int64) (user_b int64, err error) {
-	err = db.QueryRow("SELECT b FROM match WHERE a = ?", user_a).Scan(&user_b)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	} else {
-		return
 	}
 }
 
