@@ -375,8 +375,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			}
 			quickReply(
 				"「世界树」\n" +
-				"我们已为你排队，请等待下一个志趣相投的人。\n" +
-				"在此期间，不妨去听听音乐，有消息会通知你的。\n" +
+				"我们已为你排队，请等待下一个志趣相投的人，有消息会通知你的。\n" +
+				"在此期间，不妨去看看漫画吧： http://t.cn/RaomgYF\n" +
 				"若要放弃，请戳 /leave 。",
 				bot, msg)
 			broadcastNewTopic(bot, db, topic, user_a)
@@ -416,8 +416,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	if ok {
 		quickReply(
 			"「世界树」\n" +
-			"我们已为你排队，请等待下一个志趣相投的人，\n" +
-			"在此期间，不妨去听听音乐，有消息会通知你的。\n" +
+			"我们已为你排队，请等待下一个志趣相投的人，有消息会通知你的。\n" +
+			"在此期间，不妨去看看漫画吧： http://t.cn/RaomgYF\n" +
 			"若要放弃，请戳 /leave 。",
 			bot, msg)
 		return
