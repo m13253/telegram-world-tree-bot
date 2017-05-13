@@ -334,12 +334,17 @@ func handleLeaveChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		quickReply(
 			"「世界树」\n" +
 			"本次谈话已结束。\n" +
-			"要不要试试戳 /new 换一个聊伴？",
+			"要不要试试戳 /new 换一个聊伴？\n" +
+			"\n" +
+			"我们希望你能玩得开心，并向朋友推荐 @WorldTreeBot 。",
 			bot, msg)
 		reply := tgbotapi.NewMessage(user_b,
 			"「世界树」\n" +
 			"对方结束了本次谈话。\n" +
-			"要不要试试戳 /new 换一个聊伴？")
+			"要不要试试戳 /new 换一个聊伴？\n" +
+			"\n" +
+			"我们希望你能玩得开心，并向朋友推荐 @WorldTreeBot 。",
+			)
 		_, err = bot.Send(reply)
 		replyErr(err, bot, msg)
 	}
