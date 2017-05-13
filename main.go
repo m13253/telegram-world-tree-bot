@@ -217,6 +217,9 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 
 	will_repost := query.Data[:1]
 	topic := query.Data[1:]
+	if topic == "" {
+		return
+	}
 	user_b, err = popTopic(db, topic)
 	if err != nil {
 		replyErr(err, bot, msg)
@@ -367,6 +370,9 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			return
 		}
 		topic := strings.TrimSpace(msg.Text)
+		if topic == "" {
+			return
+		}
 		user_b, err := popTopic(db, topic)
 		if err != nil {
 			replyErr(err, bot, msg)
