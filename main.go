@@ -155,7 +155,7 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		reply := tgbotapi.NewMessage(user_a,
 			"「世界树」\n" +
 			"在开始之前，请输入你想讨论的话题。\n" +
-			"其它人会看到你的话题并与你交谈。" +
+			"其它人会看到你的话题并与你交谈。\n" +
 			"\n" +
 			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。")
 		reply.ReplyMarkup = tgbotapi.ForceReply {
@@ -170,7 +170,7 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"点击你感兴趣的话题与对方聊天。\n" +
 			"\n" +
 			"如果你想讨论别的话题，请直接输入。\n" +
-			"其它人会看到你的话题并与你交谈。" +
+			"其它人会看到你的话题并与你交谈。\n" +
 			"\n" +
 			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。")
 		keyboard := make([][]tgbotapi.InlineKeyboardButton, len(topics))
