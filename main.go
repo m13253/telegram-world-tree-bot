@@ -558,7 +558,8 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 		}
 		reply := tgbotapi.NewMessage(users[i],
 			"「世界树」\n" +
-			"有人新发布了以下话题。你要与对方聊天吗？\n" +
+			"有人新发布了以下话题。\n" +
+			"你要放弃自己当前的话题，与对方聊天吗？\n" +
 			"如果想与对方交谈，请点击按钮。")
 		reply.ReplyMarkup = reply_markup
 		bot.Send(reply)
