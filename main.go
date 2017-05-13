@@ -154,10 +154,10 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	if len(topics) == 0 {
 		reply := tgbotapi.NewMessage(user_a,
 			"「世界树」\n" +
-			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。\n" +
-			"\n" +
 			"在开始之前，请输入你想讨论的话题。\n" +
-			"其它人会看到你的话题并与你交谈。")
+			"其它人会看到你的话题并与你交谈。" +
+			"\n" +
+			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。")
 		reply.ReplyMarkup = tgbotapi.ForceReply {
 			ForceReply: true,
 			Selective: true,
@@ -166,13 +166,13 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	} else {
 		reply := tgbotapi.NewMessage(user_a,
 			"「世界树」\n" +
-			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。\n" +
-			"\n" +
 			"以下是等待中的话题。\n" +
 			"点击你感兴趣的话题与对方聊天。\n" +
 			"\n" +
 			"如果你想讨论别的话题，请直接输入。\n" +
-			"其它人会看到你的话题并与你交谈。")
+			"其它人会看到你的话题并与你交谈。" +
+			"\n" +
+			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。")
 		keyboard := make([][]tgbotapi.InlineKeyboardButton, len(topics))
 		for i := range topics {
 			topic_data := "+" + topics[i];
@@ -189,6 +189,10 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 }
 
 func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.CallbackQuery) {
+	bot.AnswerCallbackQuery(tgbotapi.CallbackConfig {
+		CallbackQueryID: query.ID,
+	})
+
 	msg := query.Message
 	if msg == nil || !msg.Chat.IsPrivate() {
 		return
