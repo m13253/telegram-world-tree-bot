@@ -232,8 +232,12 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 		"会话已接通，祝你们聊天愉快。\n" +
 		"话题：" + topic + "\n" +
 		"戳 /leave 离开本次谈话。\n" +
-		"\n" +
-		"注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+		"\n"
+	if DEBUG_MODE {
+		match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。"
+	} else {
+		match_ok += "注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+	}
 	reply := tgbotapi.NewMessage(user_a, match_ok)
 	bot.Send(reply)
 	reply = tgbotapi.NewMessage(user_b, match_ok)
@@ -355,8 +359,12 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				"会话已接通，祝你们聊天愉快。\n" +
 				"话题：" + topic + "\n" +
 				"戳 /leave 离开本次谈话。\n" +
-				"\n" +
-				"注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+				"\n"
+			if DEBUG_MODE {
+				match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。"
+			} else {
+				match_ok += "注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+			}
 			reply := tgbotapi.NewMessage(user_a, match_ok)
 			bot.Send(reply)
 			reply = tgbotapi.NewMessage(user_b, match_ok)
