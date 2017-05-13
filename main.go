@@ -364,13 +364,13 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if choosing {
+		topic := strings.TrimSpace(msg.Text)
+		if topic == "" {
+			return
+		}
 		setChoosingStatus(db, user_a, false)
 		if err != nil {
 			replyErr(err, bot, msg)
-			return
-		}
-		topic := strings.TrimSpace(msg.Text)
-		if topic == "" {
 			return
 		}
 		user_b, err := popTopic(db, topic)
