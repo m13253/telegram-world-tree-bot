@@ -36,6 +36,20 @@ func createTables(db *sql.DB) (err error) {
 	return
 }
 
+func getActiveUsers(db *sql.DB) (users int, err error) {
+	var users_chatting, users_waiting int
+	err = db.QueryRow("SELECT count(*) FROM match").Scan(&users_chatting)
+	if err != nil {
+		return
+	}
+	err = db.QueryRow("SELECT count(*) FROM queue").Scan(&users_waiting)
+	if err != nil {
+		return
+	}
+	users = users_chatting + users_waiting
+	return
+}
+
 func queryUser(db *sql.DB, user_a int64) (user_b int64, err error) {
 	err = db.QueryRow("SELECT b FROM match WHERE a = ?", user_a).Scan(&user_b)
 	if err == sql.ErrNoRows {
@@ -91,6 +105,24 @@ func listTopics(db *sql.DB) (topics []string, err error) {
 			return
 		}
 		topics = append(topics, topic)
+	}
+	err = rows.Err()
+	return
+}
+
+func listPendingUsers(db *sql.DB) (users []int64, err error) {
+	rows, err := db.Query("SELECT user FROM queue")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var user int64
+		err = rows.Scan(&user)
+		if err != nil {
+			return
+		}
+		users = append(users, user)
 	}
 	err = rows.Err()
 	return

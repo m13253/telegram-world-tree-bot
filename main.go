@@ -21,6 +21,7 @@ package main
 import (
 	"log"
 	"time"
+	"strconv"
 	"strings"
 	"database/sql"
 	"gopkg.in/telegram-bot-api.v4"
@@ -144,32 +145,45 @@ func handleNewChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		replyErr(err, bot, msg)
 		return
 	}
+	active_users, err := getActiveUsers(db)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
 	if len(topics) == 0 {
-		quickReply(
+		reply := tgbotapi.NewMessage(user_a,
 			"「世界树」\n" +
-			"目前找不到聊伴。\n" +
-			"请输入你感兴趣的话题，我们会为你排队。",
-			bot, msg)
+			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。\n" +
+			"\n" +
+			"在开始之前，请输入你想讨论的话题。\n" +
+			"其它人会看到你的话题并与你交谈。")
+		reply.ReplyMarkup = tgbotapi.ForceReply {
+			ForceReply: true,
+			Selective: true,
+		}
+		bot.Send(reply)
 	} else {
 		reply := tgbotapi.NewMessage(user_a,
 			"「世界树」\n" +
-			"以下的人希望与你交谈。\n" +
-			"点击你感兴趣的话题与他们聊天。\n" +
-			"你也可以输入你感兴趣的其它话题，我们会为你排队。")
+			"当前已有 " + strconv.Itoa(active_users+1) + " 个用户连接到世界树。\n" +
+			"\n" +
+			"以下是等待中的话题。\n" +
+			"点击你感兴趣的话题与对方聊天。\n" +
+			"\n" +
+			"如果你想讨论别的话题，请直接输入。\n" +
+			"其它人会看到你的话题并与你交谈。")
 		keyboard := make([][]tgbotapi.InlineKeyboardButton, len(topics))
 		for i := range topics {
+			topic_data := "+" + topics[i];
 			keyboard[i] = []tgbotapi.InlineKeyboardButton {
 				tgbotapi.InlineKeyboardButton {
 					Text: topics[i],
-					CallbackData: &topics[i],
+					CallbackData: &topic_data,
 				},
 			}
 		}
 		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
-		_, err = bot.Send(reply)
-		if err != nil {
-			panic(err)
-		}
+		bot.Send(reply)
 	}
 }
 
@@ -200,7 +214,8 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 		replyErr(err, bot, msg)
 	}
 
-	topic := query.Data
+	will_repost := query.Data[:1]
+	topic := query.Data[1:]
 	user_b, err = popTopic(db, topic)
 	if err != nil {
 		replyErr(err, bot, msg)
@@ -208,17 +223,32 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 	}
 	if user_b == 0 {
 		// The topic has gone.
-		err = pushTopic(db, user_a, topic)
-		if err != nil {
-			replyErr(err, bot, msg)
-			return
+		if will_repost == "+" {
+			err = pushTopic(db, user_a, topic)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+			quickReply(
+				"「世界树」\n" +
+				"你可能来晚了，匹配失败。\n" +
+				"我们为你重新排队，请等待下一个志趣相投的人。\n" +
+				"也可以戳 /new 重新选择话题。",
+				bot, msg)
+			broadcastNewTopic(bot, db, topic, user_a)
+		} else {
+			quickReply(
+				"「世界树」\n" +
+				"你可能来晚了，匹配失败。\n" +
+				"也可以戳 /new 重新选择话题。",
+				bot, msg)
 		}
-		quickReply(
-			"「世界树」\n" +
-			"对方刚刚离开了，匹配失败。\n" +
-			"我们为你重新排队，请等待下一个志趣相投的人。\n" +
-			"也可以戳 /new 重新选择话题。",
-			bot, msg)
+		return
+	}
+
+	err = cancelTopic(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
 		return
 	}
 
@@ -281,7 +311,8 @@ func handleLeaveChat(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		}
 		quickReply(
 			"「世界树」\n" +
-			"已放弃排队。",
+			"已放弃排队。\n" +
+			"戳 /new 重新选择话题。",
 			bot, msg)
 		return
 	}
@@ -344,9 +375,11 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			}
 			quickReply(
 				"「世界树」\n" +
-				"我们已为你排队 ，请等待下一个志趣相投的人，\n" +
-				"也可以戳 /new 重新选择话题。",
+				"我们已为你排队，请等待下一个志趣相投的人。\n" +
+				"在此期间，不妨去听听音乐，有消息会通知你的。\n" +
+				"若要放弃，请戳 /leave 。",
 				bot, msg)
+			broadcastNewTopic(bot, db, topic, user_a)
 		} else {
 			// Connect 
 			err = connectUser(db, user_a, user_b)
@@ -383,8 +416,9 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	if ok {
 		quickReply(
 			"「世界树」\n" +
-			"我们已为你排队 ，请等待下一个志趣相投的人，\n" +
-			"也可以戳 /new 重新选择话题。",
+			"我们已为你排队，请等待下一个志趣相投的人，\n" +
+			"在此期间，不妨去听听音乐，有消息会通知你的。\n" +
+			"若要放弃，请戳 /leave 。",
 			bot, msg)
 		return
 	}
@@ -501,6 +535,33 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				replyErr(err, bot, msg)
 			}
 		}
+	}
+}
+
+func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_user int64) {
+	users, err := listPendingUsers(db)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	topic_data := "-" + topic;
+	reply_markup := tgbotapi.NewInlineKeyboardMarkup(
+		[]tgbotapi.InlineKeyboardButton {
+			tgbotapi.InlineKeyboardButton {
+				Text: topic,
+				CallbackData: &topic_data,
+			},
+		})
+	for i := range users {
+		if users[i] == exclude_user {
+			continue
+		}
+		reply := tgbotapi.NewMessage(users[i],
+			"「世界树」\n" +
+			"有人新发布了以下话题。你要与对方聊天吗？\n" +
+			"如果想与对方交谈，请点击按钮。")
+		reply.ReplyMarkup = reply_markup
+		bot.Send(reply)
 	}
 }
 
