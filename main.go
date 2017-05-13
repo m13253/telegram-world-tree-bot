@@ -94,6 +94,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	quickReply(
 		"欢迎使用「世界树」！\n" +
 		"长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+		"\n" +
 		"戳 /new 寻找今天的聊伴。\n" +
 		"匿名聊天时请遵守道德和法律。",
 		bot, msg)
