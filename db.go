@@ -28,40 +28,25 @@ func createTables(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS choosing (user INTEGER UNIQUE)")
-	if err != nil {
-		return
-	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS queue (user INTEGER UNIQUE, topic STRING UNIQUE)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER UNIQUE, topic STRING)")
 	return
 }
 
-func getActiveUsers(db *sql.DB) (users int, err error) {
-	var users_chatting, users_waiting int
-	err = db.QueryRow("SELECT count(*) FROM match").Scan(&users_chatting)
+func getActiveUsers(db *sql.DB) (chat int, lobby int, err error) {
+	err = db.QueryRow("SELECT count(*) FROM match").Scan(&chat)
 	if err != nil {
 		return
 	}
-	err = db.QueryRow("SELECT count(*) FROM queue").Scan(&users_waiting)
-	if err != nil {
-		return
-	}
-	users = users_chatting + users_waiting
+	err = db.QueryRow("SELECT count(*) FROM lobby").Scan(&lobby)
 	return
 }
 
-func queryUser(db *sql.DB, user_a int64) (user_b int64, err error) {
-	err = db.QueryRow("SELECT b FROM match WHERE a = ?", user_a).Scan(&user_b)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	} else {
-		return
-	}
+func queryMatch(db *sql.DB, user_a int64) (user_b int64, err error) {
+	err = db.QueryRow("SELECT b FROM match WHERE a = ? LIMIT 1", user_a).Scan(&user_b)
+	return
 }
 
-func connectUser(db *sql.DB, user_a int64, user_b int64) (err error) {
+func connectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return
@@ -87,13 +72,13 @@ func connectUser(db *sql.DB, user_a int64, user_b int64) (err error) {
 	return
 }
 
-func disconnectUser(db *sql.DB, user int64) (err error) {
+func disconnectChat(db *sql.DB, user int64) (err error) {
 	_, err = db.Exec("DELETE FROM match WHERE a = ? OR b = ?", user, user)
 	return
 }
 
 func listTopics(db *sql.DB) (topics []string, err error) {
-	rows, err := db.Query("SELECT topic FROM queue ORDER BY random()")
+	rows, err := db.Query("SELECT topic FROM lobby WHERE topic IS NOT NULL ORDER BY random()")
 	if err != nil {
 		return
 	}
@@ -111,7 +96,7 @@ func listTopics(db *sql.DB) (topics []string, err error) {
 }
 
 func listPendingUsers(db *sql.DB) (users []int64, err error) {
-	rows, err := db.Query("SELECT user FROM queue")
+	rows, err := db.Query("SELECT user FROM lobby")
 	if err != nil {
 		return
 	}
@@ -128,57 +113,53 @@ func listPendingUsers(db *sql.DB) (users []int64, err error) {
 	return
 }
 
-func pushTopic(db *sql.DB, user int64, topic string) (err error) {
-	_, err = db.Exec("INSERT OR REPLACE INTO queue VALUES (?, ?)", user, topic)
+func setTopic(db *sql.DB, user int64, topic string) (err error) {
+	_, err = db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, ?)", user, topic)
 	return
 }
 
-func popTopic(db *sql.DB, topic string) (user int64, err error) {
-	err = db.QueryRow("SELECT user FROM queue WHERE topic = ?", topic).Scan(&user)
+func queryTopic(db *sql.DB, topic string) (user int64, err error) {
+	err = db.QueryRow("SELECT user FROM lobby WHERE topic = ? LIMIT 1", topic).Scan(&user)
 	if err == sql.ErrNoRows {
 		return 0, nil
-	} else if err != nil {
-		return 0, err
 	}
-	err = cancelTopic(db, user)
 	return
 }
 
-func cancelTopic(db *sql.DB, user int64) (err error) {
-	_, err = db.Exec("DELETE FROM queue WHERE user = ?", user)
+func joinLobby(db *sql.DB, user int64) (err error) {
+	_, err = db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, NULL)", user)
 	return
+}
+
+func leaveLobby(db *sql.DB, user int64) (err error) {
+	_, err = db.Exec("DELETE FROM lobby WHERE user = ?", user)
+	return
+}
+
+func isUserInChat(db *sql.DB, user int64) (ok bool, err error) {
+	var count int
+	err = db.QueryRow("SELECT count(*) FROM match WHERE a = ?", user).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
+}
+
+func isUserInLobby(db *sql.DB, user int64) (ok bool, err error) {
+	var count int
+	err = db.QueryRow("SELECT count(*) FROM lobby WHERE user = ?", user).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
 }
 
 func isUserInQueue(db *sql.DB, user int64) (ok bool, err error) {
-	var user_ int64
-	err = db.QueryRow("SELECT user FROM queue WHERE user = ?", user).Scan(&user_)
-	if err == sql.ErrNoRows {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	} else {
-		return true, nil
-	}
-}
-
-func setChoosingStatus(db *sql.DB, user int64, choosing bool) (err error) {
-	if choosing {
-		_, err = db.Exec("INSERT OR REPLACE INTO choosing VALUES (?)", user)
-	} else {
-		_, err = db.Exec("DELETE FROM choosing WHERE user = ?", user)
-	}
-	return
-}
-
-func getChoosingStatus(db *sql.DB, user int64) (choosing bool, err error) {
-	var user_ int64
-	err = db.QueryRow("SELECT user FROM choosing WHERE user = ?", user).Scan(&user_)
-	if err == sql.ErrNoRows {
-		return false, nil
-	} else if err == nil {
-		return true, nil
-	} else {
+	var count int
+	err = db.QueryRow("SELECT count(*) FROM lobby WHERE user = ? AND topic IS NOT NULL", user).Scan(&count)
+	if err != nil {
 		return false, err
 	}
+	return count != 0, nil
 }
 
