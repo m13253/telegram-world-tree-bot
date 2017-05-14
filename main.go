@@ -568,7 +568,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				"请等待世界树配对一个点赞的人。\n" +
 				"或戳 /list 看看还有哪些话题。",
 				bot, msg)
-			broadcastNewTopic(bot, db, topic, user_a)
+			go broadcastNewTopic(bot, db, topic, user_a)
 		} else {
 			// Found a match
 			err = leaveLobby(db, user_a)
@@ -712,7 +712,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			"或戳 /list 看看还有哪些话题。",
 			bot, msg)
 		if user_b == 0 {
-			broadcastNewTopic(bot, db, topic, user_a)
+			go broadcastNewTopic(bot, db, topic, user_a)
 		}
 	} else {
 		err = leaveLobby(db, user_a)
