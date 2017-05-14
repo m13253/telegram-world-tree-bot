@@ -242,17 +242,12 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			replyErr(err, bot, msg)
 			// Ignore the error
 		}
-		err = disconnectChat(db, user_a)
+		err = disconnectChat(db, user_a, user_b)
 		if err != nil {
 			replyErr(err, bot, msg)
 		}
 
 		err = joinLobby(db, user_a)
-		if err != nil {
-			replyErr(err, bot, msg)
-			return
-		}
-		err = joinLobby(db, user_b)
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
@@ -272,31 +267,23 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要离开世界树，请戳 /disconnect 。",
 			chat + lobby, lobby), bot, msg)
-		reply := tgbotapi.NewMessage(user_b, fmt.Sprintf(
-			"「世界树」\n" +
-			"对方结束了本次谈话，你已回到大厅。\n" +
-			"何不试试发布下一个聊天话题？\n" +
-			"不想聊了就去看看漫画吧： t.cn/RaomgYF\n" +
-			"\n" +
-			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"若要离开世界树，请戳 /disconnect 。",
-			chat + lobby, lobby))
-		reply.DisableWebPagePreview = true
-		_, err = bot.Send(reply)
-		if err != nil {
-			replyErr(err, bot, msg)
-			return
-		}
 		sendTopicList(bot, db, user_a,
 			"「世界树」\n" +
 			"\n" +
 			"你对这些话题感兴趣吗？\n" +
 			"点击感兴趣的话题即可立刻开始聊天：")
-		sendTopicList(bot, db, user_b,
-			"「世界树」\n" +
-			"\n" +
-			"你对这些话题感兴趣吗？\n" +
-			"点击感兴趣的话题即可立刻开始聊天：")
+
+		if user_b != 0 {
+			reply := tgbotapi.NewMessage(user_b,
+				"「世界树」\n" +
+				"对方结束了本次谈话。\n" +
+				"戳 /leave 回到大厅。")
+			_, err = bot.Send(reply)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+		}
 		return
 	}
 
@@ -410,12 +397,21 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	if ok {
 		printLog(msg.Chat.FirstName, msg.Chat.LastName, msg.Text, true)
 
-		// Forward the message to the partner
 		user_b, err := queryMatch(db, user_a)
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
 		}
+		if user_b == 0 {
+			quickReply(
+				"「世界树」\n" +
+				"对方结束了本次谈话，你的消息未送达。\n" +
+				"戳 /leave 回到大厅。",
+				bot, msg)
+			return
+		}
+
+		// Forward the message to the partner
 		if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
 			fwd := tgbotapi.NewForward(user_b, msg.Chat.ID, msg.MessageID)
 			_, err = bot.Send(fwd)

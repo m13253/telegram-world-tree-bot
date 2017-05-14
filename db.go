@@ -72,9 +72,15 @@ func connectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
 	return
 }
 
-func disconnectChat(db *sql.DB, user int64) (err error) {
-	_, err = db.Exec("DELETE FROM match WHERE a = ? OR b = ?", user, user)
-	return
+func disconnectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
+	if user_b != 0 {
+		_, err = db.Exec("UPDATE match SET b = 0 WHERE a = ?", user_b)
+	}
+	_, err1 := db.Exec("DELETE FROM match WHERE a = ?", user_a)
+	if err != nil {
+		return
+	}
+	return err1
 }
 
 func listTopics(db *sql.DB) (topics []string, err error) {
