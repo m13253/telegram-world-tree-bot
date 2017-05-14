@@ -58,7 +58,7 @@ func main() {
 		if msg != nil && msg.Chat.IsPrivate() {
 
 			if strings.HasPrefix(msg.Text, "/") {
-				printLog(msg.Chat.FirstName, msg.Chat.LastName, msg.Text, false)
+				printLog(msg.From, msg.Text, false)
 			}
 
 			cmd := msg.Command()
@@ -410,7 +410,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
-		printLog(msg.Chat.FirstName, msg.Chat.LastName, msg.Text, true)
+		printLog(msg.From, msg.Text, true)
 
 		user_b, err := queryMatch(db, user_a)
 		if err != nil {
@@ -530,7 +530,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 
-	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(lobby) " + msg.Text, false)
+	printLog(msg.From, "(lobby) " + msg.Text, false)
 
 	// Detect whether the user is in lobby.
 	ok, err = isUserInLobby(db, user_a)
@@ -640,7 +640,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 	}
 	user_a := msg.Chat.ID
 
-	printLog(query.From.FirstName, query.From.LastName, "(menu) " + query.Data, false)
+	printLog(query.From, "(menu) " + query.Data, false)
 
 	// Detect whether the user is in chat.
 	ok, err := isUserInChat(db, user_a)
@@ -824,15 +824,20 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 	}
 }
 
-func printLog(first_name string, last_name string, text string, scramble bool) {
+func printLog(user *tgbotapi.User, text string, scramble bool) {
 	if !DEBUG_MODE && scramble {
 		text = "(scrambled)"
 	}
-	if last_name == "" {
-		log.Printf("[%s]: %s\n", first_name, text)
-	} else {
-		log.Printf("[%s %s]: %s\n", first_name, last_name, text)
+	var user_repr string
+	if user.UserName != "" {
+		user_repr += fmt.Sprintf("@%s ", user.UserName)
 	}
+	user_repr += user.FirstName
+	if user.LastName != "" {
+		user_repr += " " + user.LastName
+	}
+	user_repr += fmt.Sprintf(" #%d", user.ID)
+	log.Printf("[%s]: %s\n", user_repr, text)
 }
 
 func quickReply(text string, bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (err error) {

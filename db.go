@@ -102,7 +102,7 @@ func listTopics(db *sql.DB) (topics []string, err error) {
 }
 
 func listPendingUsers(db *sql.DB) (users []int64, err error) {
-	rows, err := db.Query("SELECT user FROM lobby")
+	rows, err := db.Query("SELECT user FROM lobby ORDER BY random()")
 	if err != nil {
 		return
 	}
@@ -121,7 +121,7 @@ func listPendingUsers(db *sql.DB) (users []int64, err error) {
 			return
 		}
 	}
-	rows, err = db.Query("SELECT a FROM match WHERE b = 0")
+	rows, err = db.Query("SELECT a FROM match WHERE b = 0 ORDER BY random()")
 	if err != nil {
 		return
 	}
