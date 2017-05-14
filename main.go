@@ -626,7 +626,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 	}
 	user_a := msg.Chat.ID
 
-	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(menu) " + query.Data, false)
+	printLog(query.From.FirstName, query.From.LastName, "(menu) " + query.Data, false)
 
 	// Detect whether the user is in chat.
 	ok, err := isUserInChat(db, user_a)
@@ -788,7 +788,7 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 }
 
 func printLog(first_name string, last_name string, text string, scramble bool) {
-	if DEBUG_MODE && scramble {
+	if !DEBUG_MODE && scramble {
 		text = "(scrambled)"
 	}
 	if last_name == "" {
