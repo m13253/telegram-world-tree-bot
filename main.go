@@ -539,7 +539,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
-		topic := strings.TrimSpace(msg.Text)
+		topic := validifyTopic(msg.Text)
 		if topic == "" {
 			return
 		}
@@ -838,6 +838,20 @@ func printLog(user *tgbotapi.User, text string, scramble bool) {
 		user_repr += " " + user.LastName
 	}
 	log.Printf("[%s]: %s\n", user_repr, text)
+}
+
+func validifyTopic(topic string) string {
+	topic = strings.TrimSpace(topic)
+	if len(topic) > 64 {
+		last_i := 0
+		for i, _ := range topic {
+			if i > 61 {
+				return topic[:last_i] + "…"
+			}
+			last_i = i
+		}
+	}
+	return topic
 }
 
 func quickReply(text string, bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (err error) {
