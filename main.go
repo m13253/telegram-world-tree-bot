@@ -626,7 +626,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 	}
 	user_a := msg.Chat.ID
 
-	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(menu) " + msg.Text, false)
+	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(menu) " + query.Data, false)
 
 	// Detect whether the user is in chat.
 	ok, err := isUserInChat(db, user_a)
