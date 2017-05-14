@@ -603,7 +603,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 			match_ok := "「世界树」\n" +
 				"\n" +
-				"会话已接通，祝你们聊天愉快。\n" +
+				"\U0001f495 会话已接通，祝你们聊天愉快。\n" +
 				"话题：" + topic + "\n" +
 				"戳 /leave 离开本次谈话。\n" +
 				"\n"
@@ -749,7 +749,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 
 		match_ok := "「世界树」\n" +
 			"\n" +
-			"会话已接通，祝你们聊天愉快。\n" +
+			"\U0001f495 会话已接通，祝你们聊天愉快。\n" +
 			"话题：" + topic + "\n" +
 			"戳 /leave 离开本次谈话。\n" +
 			"\n"
