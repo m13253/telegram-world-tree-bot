@@ -24,7 +24,7 @@ import (
 )
 
 func createTables(db *sql.DB) (err error) {
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER UNIQUE, b INTEGER UNIQUE)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER UNIQUE, b INTEGER)")
 	if err != nil {
 		return
 	}
