@@ -124,6 +124,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			if !DEBUG_MODE {
 				quickReply(
 					"「世界树」\n" +
+					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 					"\n" +
 					CLOSED_MSG,
 					bot, msg)
@@ -553,6 +554,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				if !DEBUG_MODE {
 					quickReply(
 						"「世界树」\n" +
+						"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 						"\n" +
 						CLOSED_MSG,
 						bot, msg)
@@ -698,6 +700,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			if !DEBUG_MODE {
 				quickReply(
 					"「世界树」\n" +
+					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 					"\n" +
 					CLOSED_MSG,
 					bot, msg)
