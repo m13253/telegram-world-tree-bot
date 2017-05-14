@@ -166,6 +166,12 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 func handleList(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
+	chat, lobby, err := getActiveUsers(db)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+
 	// Detect whether the user is in chat.
 	ok, err := isUserInChat(db, user_a)
 	if err != nil {
@@ -173,20 +179,23 @@ func handleList(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
-		count, err := sendTopicList(bot, db, user_a,
+		count, err := sendTopicList(bot, db, user_a, fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
-			"以下是大厅内的话题清单：\n")
+			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
+			"以下是大厅内的话题清单：\n",
+			chat + lobby, lobby))
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
 		}
 		if count == 0 {
-			quickReply(
+			quickReply(fmt.Sprintf(
 				"「世界树」\n" +
 				"\n" +
+				"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 				"当前大厅内没有话题。",
-				bot, msg)
+				chat + lobby, lobby), bot, msg)
 		}
 		return
 	}
@@ -198,22 +207,25 @@ func handleList(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
-		count, err := sendTopicList(bot, db, user_a,
+		count, err := sendTopicList(bot, db, user_a, fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
 			"以下是大厅内的话题清单，\n" +
-			"点击感兴趣的话题即可立刻开始聊天：")
+			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
+			"点击感兴趣的话题即可立刻开始聊天：",
+			chat + lobby, lobby))
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
 		}
 		if count == 0 {
-			quickReply(
+			quickReply(fmt.Sprintf(
 				"「世界树」\n" +
 				"\n" +
+				"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 				"当前大厅内没有话题。\n" +
 				"何不发布一个呢？",
-				bot, msg)
+				chat + lobby, lobby), bot, msg)
 		}
 		return
 	}
