@@ -106,16 +106,40 @@ func listPendingUsers(db *sql.DB) (users []int64, err error) {
 	if err != nil {
 		return
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var user int64
-		err = rows.Scan(&user)
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
 		if err != nil {
 			return
 		}
-		users = append(users, user)
 	}
-	err = rows.Err()
+	rows, err = db.Query("SELECT a FROM match WHERE b = 0")
+	if err != nil {
+		return
+	}
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 

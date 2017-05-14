@@ -631,16 +631,34 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 		return
 	}
 	if ok {
-		quickReply(
-			"「世界树」\n" +
-			"\n" +
-			"你正在一次会话中。\n" +
-			"先戳 /leave 离开本次谈话，才能开始下一个会话。",
-			bot, msg)
-		bot.AnswerCallbackQuery(tgbotapi.CallbackConfig {
-			CallbackQueryID: query.ID,
-		})
-		return
+		user_b, err := queryMatch(db, user_a)
+		if err != nil {
+			replyErr(err, bot, msg)
+			return
+		}
+		if user_b != 0 {
+			quickReply(
+				"「世界树」\n" +
+				"\n" +
+				"你正在一次会话中。\n" +
+				"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+				bot, msg)
+			bot.AnswerCallbackQuery(tgbotapi.CallbackConfig {
+				CallbackQueryID: query.ID,
+			})
+			return
+		} else {
+			err := disconnectChat(db, user_a, 0)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+			err = joinLobby(db, user_a)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+		}
 	}
 
 	topic := query.Data
