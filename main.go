@@ -32,8 +32,8 @@ func main() {
 
 	if DEBUG_MODE {
 		log.Println("The program is running in debug mode,")
-		log.Println("the time limit will be disabled,")
-		log.Println("all chat logs will be print.")
+		log.Println("  the time limit will be disabled,")
+		log.Println("  all chat logs will be print.")
 	}
 
 	db, err := sql.Open("sqlite3", "./bot.db")
