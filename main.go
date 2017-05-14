@@ -829,6 +829,7 @@ func printLog(user *tgbotapi.User, text string, scramble bool) {
 		text = "(scrambled)"
 	}
 	var user_repr string
+	user_repr += fmt.Sprintf("#%d ", user.ID)
 	if user.UserName != "" {
 		user_repr += fmt.Sprintf("@%s ", user.UserName)
 	}
@@ -836,7 +837,6 @@ func printLog(user *tgbotapi.User, text string, scramble bool) {
 	if user.LastName != "" {
 		user_repr += " " + user.LastName
 	}
-	user_repr += fmt.Sprintf(" #%d", user.ID)
 	log.Printf("[%s]: %s\n", user_repr, text)
 }
 
