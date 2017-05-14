@@ -681,7 +681,9 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			"请等待世界树配对另一个点赞的人。\n" +
 			"或戳 /list 看看还有哪些话题。",
 			bot, msg)
-		broadcastNewTopic(bot, db, topic, user_a)
+		if user_b != user_a {
+			broadcastNewTopic(bot, db, topic, user_a)
+		}
 	} else {
 		err = leaveLobby(db, user_a)
 		if err != nil {
