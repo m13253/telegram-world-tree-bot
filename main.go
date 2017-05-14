@@ -124,6 +124,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			if !DEBUG_MODE {
 				quickReply(
 					"「世界树」\n" +
+					"\n" +
 					CLOSED_MSG,
 					bot, msg)
 				return
@@ -232,6 +233,7 @@ func handleList(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
+		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -272,6 +274,7 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		}
 		quickReply(fmt.Sprintf(
 			"「世界树」\n" +
+			"\n" +
 			"本次谈话已结束，你已回到大厅。\n" +
 			"何不试试发布下一个聊天话题？\n" +
 			"不想聊了就去看看漫画吧： t.cn/RaomgYF\n" +
@@ -288,6 +291,7 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		if user_b != 0 {
 			reply := tgbotapi.NewMessage(user_b,
 				"「世界树」\n" +
+				"\n" +
 				"对方结束了本次谈话。\n" +
 				"戳 /leave 回到大厅。")
 			_, err = bot.Send(reply)
@@ -338,6 +342,7 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
+		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -390,6 +395,7 @@ func handleDisconnect(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
+		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -417,6 +423,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		if user_b == 0 {
 			quickReply(
 				"「世界树」\n" +
+				"\n" +
 				"对方结束了本次谈话，你的消息未送达。\n" +
 				"戳 /leave 回到大厅。",
 				bot, msg)
@@ -549,6 +556,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				if !DEBUG_MODE {
 					quickReply(
 						"「世界树」\n" +
+						"\n" +
 						CLOSED_MSG,
 						bot, msg)
 					return
@@ -597,6 +605,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			}
 
 			match_ok := "「世界树」\n" +
+				"\n" +
 				"会话已接通，祝你们聊天愉快。\n" +
 				"话题：" + topic + "\n" +
 				"戳 /leave 离开本次谈话。\n" +
@@ -620,6 +629,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
+		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -692,6 +702,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			if !DEBUG_MODE {
 				quickReply(
 					"「世界树」\n" +
+					"\n" +
 					CLOSED_MSG,
 					bot, msg)
 				return
@@ -741,6 +752,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 		}
 
 		match_ok := "「世界树」\n" +
+			"\n" +
 			"会话已接通，祝你们聊天愉快。\n" +
 			"话题：" + topic + "\n" +
 			"戳 /leave 离开本次谈话。\n" +
@@ -807,6 +819,7 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 		}
 		reply := tgbotapi.NewMessage(users[i],
 			"「世界树」\n" +
+			"\n" +
 			"有人新发布了以下话题：\n" +
 			"\n" +
 			topic)
@@ -839,6 +852,7 @@ func replyErr(err error, bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		log.Println(err)
 		quickReply(
 			"「世界树」\n" +
+			"\n" +
 			"程序发生了错误，刚刚的消息可能没有送达。",
 			bot, msg)
 	}
