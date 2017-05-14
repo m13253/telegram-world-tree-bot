@@ -29,6 +29,13 @@ import (
 )
 
 func main() {
+
+	if DEBUG_MODE {
+		log.Println("The program is running in debug mode,")
+		log.Println("the time limit will be disabled,")
+		log.Println("all chat logs will be print.")
+	}
+
 	db, err := sql.Open("sqlite3", "./bot.db")
 	checkErr(err)
 
@@ -50,14 +57,8 @@ func main() {
 		msg := update.Message
 		if msg != nil && msg.Chat.IsPrivate() {
 
-			log_text := msg.Text
-			if !DEBUG_MODE && !strings.HasPrefix(msg.Text, "/") {
-				log_text = "(scrambled)"
-			}
-			if msg.Chat.LastName == "" {
-				log.Printf("[%s]: %s\n", msg.Chat.FirstName, log_text)
-			} else {
-				log.Printf("[%s %s]: %s\n", msg.Chat.FirstName, msg.Chat.LastName, log_text)
+			if strings.HasPrefix(msg.Text, "/") {
+				printLog(msg.Chat.FirstName, msg.Chat.LastName, msg.Text, false)
 			}
 
 			cmd := msg.Command()
@@ -407,6 +408,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
+		printLog(msg.Chat.FirstName, msg.Chat.LastName, msg.Text, true)
+
 		// Forward the message to the partner
 		user_b, err := queryMatch(db, user_a)
 		if err != nil {
@@ -515,6 +518,8 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 
+	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(lobby) " + msg.Text, false)
+
 	// Detect whether the user is in lobby.
 	ok, err = isUserInLobby(db, user_a)
 	if err != nil {
@@ -620,6 +625,8 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 		return
 	}
 	user_a := msg.Chat.ID
+
+	printLog(msg.Chat.FirstName, msg.Chat.LastName, "(menu) " + msg.Text, false)
 
 	// Detect whether the user is in chat.
 	ok, err := isUserInChat(db, user_a)
@@ -777,6 +784,17 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 			topic)
 		reply.ReplyMarkup = reply_markup
 		bot.Send(reply)
+	}
+}
+
+func printLog(first_name string, last_name string, text string, scramble bool) {
+	if DEBUG_MODE && scramble {
+		text = "(scrambled)"
+	}
+	if last_name == "" {
+		log.Printf("[%s]: %s\n", last_name, text)
+	} else {
+		log.Printf("[%s %s]: %s\n", first_name, last_name, text)
 	}
 }
 
