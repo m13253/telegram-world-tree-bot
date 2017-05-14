@@ -792,7 +792,7 @@ func printLog(first_name string, last_name string, text string, scramble bool) {
 		text = "(scrambled)"
 	}
 	if last_name == "" {
-		log.Printf("[%s]: %s\n", last_name, text)
+		log.Printf("[%s]: %s\n", first_name, text)
 	} else {
 		log.Printf("[%s %s]: %s\n", first_name, last_name, text)
 	}
