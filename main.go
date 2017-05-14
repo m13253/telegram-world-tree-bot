@@ -233,7 +233,6 @@ func handleList(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
-		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -342,7 +341,6 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
-		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -395,7 +393,6 @@ func handleDisconnect(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
-		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
@@ -629,7 +626,6 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 
 	quickReply(
 		"「世界树」！\n" +
-		"\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
