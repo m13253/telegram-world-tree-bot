@@ -845,7 +845,7 @@ func validifyTopic(topic string) string {
 	if len(topic) > 64 {
 		last_i := 0
 		for i, _ := range topic {
-			if i > 61 {
+			if i > 60 {
 				return topic[:last_i] + "…"
 			}
 			last_i = i
