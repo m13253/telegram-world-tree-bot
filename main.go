@@ -119,7 +119,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				"「世界树」\n" +
 				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 				"\n" +
-				CLOSED_MSG,
+				"\u274c " + CLOSED_MSG,
 				bot, msg)
 			return
 		}
@@ -556,7 +556,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 						"「世界树」\n" +
 						"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 						"\n" +
-						CLOSED_MSG,
+						"\u274c " + CLOSED_MSG,
 						bot, msg)
 					return
 				}
@@ -702,7 +702,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 					"「世界树」\n" +
 					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 					"\n" +
-					CLOSED_MSG,
+					"\u274c " + CLOSED_MSG,
 					bot, msg)
 				return
 			}
