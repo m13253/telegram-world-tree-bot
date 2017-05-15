@@ -306,7 +306,7 @@ func handleLeave(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"\n" +
 			"本次谈话已结束，你已回到大厅。\n" +
 			"何不试试发布下一个聊天话题？\n" +
-			"不想聊了就去看看漫画吧： t.cn/RaomgYF\n" +
+			"如果喜欢的话，请推荐世界树 @WorldTreeBot 给朋友。人多才会好玩哩！\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要离开世界树，请戳 /disconnect 。",
@@ -413,8 +413,8 @@ func handleDisconnect(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"「世界树」\n" +
 			"\n" +
 			"你已断开与世界树的连接。\n" +
-			"世界树会想念你的，记得常回来看看～\n" +
-			"如果喜欢的话，请推荐世界树 @WorldTreeBot 给朋友。\n" +
+			"世界树会想念你的，记得常回来逛～\n" +
+			"不想聊了就去看看漫画吧： t.cn/RaomgYF\n" +
 			"\n" +
 			"戳 /start 重新开始。",
 			bot, msg)
