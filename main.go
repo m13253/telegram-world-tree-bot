@@ -569,11 +569,12 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if ok {
-		topic := validifyTopic(msg.Text)
+		topic := strings.TrimSpace(msg.Text)
+		short_topic := limitTopic(topic)
 		if topic == "" {
 			return
 		}
-		user_b, err := queryTopic(db, topic)
+		user_b, err := queryTopic(db, short_topic)
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
@@ -589,7 +590,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				return
 			}
 
-			err = setTopic(db, user_a, topic)
+			err = setTopic(db, user_a, short_topic)
 			if err != nil {
 				replyErr(err, bot, msg)
 				return
@@ -602,7 +603,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				"请等待世界树配对一个点赞的人。\n" +
 				"或戳 /list 看看还有哪些话题。",
 				bot, msg)
-			go broadcastNewTopic(bot, db, topic, user_a)
+			go broadcastNewTopic(bot, db, topic, short_topic, user_a)
 		} else {
 			// Found a match
 			err = leaveLobby(db, user_a)
@@ -821,7 +822,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			"或戳 /list 看看还有哪些话题。",
 			bot, msg)
 		if user_b == 0 {
-			go broadcastNewTopic(bot, db, topic, user_a)
+			go broadcastNewTopic(bot, db, topic, topic, user_a)
 		}
 	} else {
 		err = leaveLobby(db, user_a)
@@ -898,7 +899,7 @@ func sendTopicList(bot *tgbotapi.BotAPI, db *sql.DB, user int64, caption string)
 	return
 }
 
-func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_user int64) {
+func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, short_topic string, exclude_user int64) {
 	users, err := listPendingUsers(db)
 	if err != nil {
 		log.Println(err)
@@ -908,7 +909,7 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, exclude_u
 		[]tgbotapi.InlineKeyboardButton {
 			tgbotapi.InlineKeyboardButton {
 				Text: "\u2764\ufe0f 赞",
-				CallbackData: &topic,
+				CallbackData: &short_topic,
 			},
 		})
 	for i := range users {
@@ -942,8 +943,7 @@ func printLog(user *tgbotapi.User, text string, scramble bool) {
 	log.Printf("[%s]: %s\n", user_repr, text)
 }
 
-func validifyTopic(topic string) string {
-	topic = strings.TrimSpace(topic)
+func limitTopic(topic string) string {
 	if len(topic) > 64 {
 		last_i := 0
 		for i, _ := range topic {
