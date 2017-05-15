@@ -24,6 +24,10 @@ import (
 )
 
 func createTables(db *sql.DB) (err error) {
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS admin (user INTEGER UNIQUE)")
+	if err != nil {
+		return
+	}
 	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER UNIQUE, b INTEGER)")
 	if err != nil {
 		return
@@ -143,6 +147,48 @@ func listPendingUsers(db *sql.DB) (users []int64, err error) {
 	return
 }
 
+func listAllUsers(db *sql.DB) (users []int64, err error) {
+	rows, err := db.Query("SELECT a FROM match ORDER BY random()")
+	if err != nil {
+		return
+	}
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
+		if err != nil {
+			return
+		}
+	}
+	rows, err = db.Query("SELECT user FROM lobby ORDER BY random()")
+	if err != nil {
+		return
+	}
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func setTopic(db *sql.DB, user int64, topic string) (err error) {
 	_, err = db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, ?)", user, topic)
 	return
@@ -193,3 +239,11 @@ func isUserInQueue(db *sql.DB, user int64) (ok bool, err error) {
 	return count != 0, nil
 }
 
+func isUserAnAdmin(db *sql.DB, user int64) (ok bool, err error) {
+	var count int
+	err = db.QueryRow("SELECT count(*) FROM admin WHERE user = ?", user).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
+}

@@ -62,7 +62,9 @@ func main() {
 			}
 
 			cmd := msg.Command()
-			if cmd == "start" {
+			if cmd == "" {
+				handleMessage(bot, db, msg)
+			} else if cmd == "start" {
 				handleStart(bot, db, msg)
 			} else if cmd == "list" {
 				handleList(bot, db, msg)
@@ -70,8 +72,10 @@ func main() {
 				handleLeave(bot, db, msg)
 			} else if cmd == "disconnect" {
 				handleDisconnect(bot, db, msg)
+			} else if cmd == "wall" {
+				handleWall(bot, db, msg)
 			} else {
-				handleMessage(bot, db, msg)
+				handleInvalid(bot, db, msg)
 			}
 
 		}
@@ -631,6 +635,80 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你尚未连接到世界树。\n" +
+		"何不戳一下 /start 试试看？",
+		bot, msg)
+}
+
+func handleWall(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
+	user_a := msg.Chat.ID
+
+	// Detect whether the user is an admininistrator.
+	ok, err := isUserAnAdmin(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if ok {
+		alert := strings.TrimSpace(msg.CommandArguments())
+		if alert == "" {
+			return
+		}
+		go func() {
+			users, err := listAllUsers(db)
+			if err != nil {
+				replyErr(err, bot, msg)
+				return
+			}
+			for i := range users {
+				reply := tgbotapi.NewMessage(users[i],
+					"「世界树」\n" +
+					"\n" +
+					"系统公告：\n" +
+					alert)
+				bot.Send(reply)
+			}
+		}()
+		return
+	}
+
+	handleInvalid(bot, db, msg)
+}
+
+func handleInvalid(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
+	user_a := msg.Chat.ID
+
+	// Detect whether the user is in chat.
+	ok, err := isUserInChat(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if ok {
+		handleMessage(bot, db, msg)
+		return
+	}
+
+	// Detect whether the user is in lobby.
+	ok, err = isUserInLobby(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
+	if ok {
+		quickReply(
+			"「世界树」！\n" +
+			"\n" +
+			"你输入了错误的指令。\n" +
+			"何不戳一下 /start 试试看？",
+			bot, msg)
+		return
+	}
+
+	quickReply(
+		"「世界树」！\n" +
+		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+		"\n" +
+		"你输入了错误的指令。\n" +
 		"何不戳一下 /start 试试看？",
 		bot, msg)
 }
