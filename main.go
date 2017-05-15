@@ -113,6 +113,18 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 
+	if !IsOpenHour(time.Now()) {
+		if !DEBUG_MODE {
+			quickReply(
+				"「世界树」\n" +
+				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+				"\n" +
+				CLOSED_MSG,
+				bot, msg)
+			return
+		}
+	}
+
 	// Detect whether the user is not in lobby yet.
 	ok, err = isUserInLobby(db, user_a)
 	if err != nil {
@@ -120,18 +132,6 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 	if !ok {
-		if !IsOpenHour(time.Now()) {
-			if !DEBUG_MODE {
-				quickReply(
-					"「世界树」\n" +
-					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-					"\n" +
-					CLOSED_MSG,
-					bot, msg)
-				return
-			}
-		}
-
 		err = joinLobby(db, user_a)
 		if err != nil {
 			replyErr(err, bot, msg)
