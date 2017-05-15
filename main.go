@@ -923,6 +923,7 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, short_top
 			"\n" +
 			topic)
 		reply.ReplyMarkup = reply_markup
+		reply.DisableNotification = true
 		bot.Send(reply)
 	}
 }
