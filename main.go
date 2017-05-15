@@ -117,34 +117,51 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		return
 	}
 
-	if !IsOpenHour(time.Now()) {
-		if !DEBUG_MODE {
-			quickReply(
-				"「世界树」\n" +
-				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-				"\n" +
-				"\u274c " + CLOSED_MSG,
-				bot, msg)
-			return
-		}
-	}
-
 	// Detect whether the user is not in lobby yet.
 	ok, err = isUserInLobby(db, user_a)
 	if err != nil {
 		replyErr(err, bot, msg)
 		return
 	}
-	if !ok {
-		err = joinLobby(db, user_a)
+	if ok {
+		chat, lobby, err := getActiveUsers(db)
 		if err != nil {
 			replyErr(err, bot, msg)
 			return
 		}
-		// Fall through
+		quickReply(fmt.Sprintf(
+			"欢迎使用「世界树」！\n" +
+			"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+			"\n" +
+			"你已进入大厅。在这里，你可以匿名地发布聊天话题。\n" +
+			"如果有人为你点赞，你们将开始一段匿名的私人聊天。\n" +
+			"你至多可发布一条话题，或为一个人点赞，最后一次操作有效。\n" +
+			"\n" +
+			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
+			"若要离开世界树，请戳 /disconnect 。\n" +
+			"请善待他人，遵守道德和法律。",
+			chat + lobby, lobby), bot, msg)
+		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+			quickReply(
+				"「世界树」\n" +
+				"\n" +
+				"\u274c " + CLOSED_MSG,
+				bot, msg)
+			return
+		}
+		sendTopicList(bot, db, user_a,
+			"「世界树」\n" +
+			"\n" +
+			"你对这些话题感兴趣吗？\n" +
+			"点击感兴趣的话题即可立刻开始聊天：")
+		return
 	}
 
-	// The user should be in lobby.
+	err = joinLobby(db, user_a)
+	if err != nil {
+		replyErr(err, bot, msg)
+		return
+	}
 	chat, lobby, err := getActiveUsers(db)
 	if err != nil {
 		replyErr(err, bot, msg)
@@ -162,6 +179,14 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		"若要离开世界树，请戳 /disconnect 。\n" +
 		"请善待他人，遵守道德和法律。",
 		chat + lobby, lobby), bot, msg)
+	if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+		quickReply(
+			"「世界树」\n" +
+			"\n" +
+			"\u274c " + CLOSED_MSG,
+			bot, msg)
+		return
+	}
 	sendTopicList(bot, db, user_a,
 		"「世界树」\n" +
 		"\n" +
@@ -554,16 +579,14 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			return
 		}
 		if user_b == 0 || user_b == user_a {
-			if !IsOpenHour(time.Now()) {
-				if !DEBUG_MODE {
-					quickReply(
-						"「世界树」\n" +
-						"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-						"\n" +
-						"\u274c " + CLOSED_MSG,
-						bot, msg)
-					return
-				}
+			if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+				quickReply(
+					"「世界树」\n" +
+					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+					"\n" +
+					"\u274c " + CLOSED_MSG,
+					bot, msg)
+				return
 			}
 
 			err = setTopic(db, user_a, topic)
@@ -774,16 +797,14 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 	}
 	if user_b == 0 || user_b == user_a {
 		// The topic has gone.
-		if !IsOpenHour(time.Now()) {
-			if !DEBUG_MODE {
-				quickReply(
-					"「世界树」\n" +
-					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-					"\n" +
-					"\u274c " + CLOSED_MSG,
-					bot, msg)
-				return
-			}
+		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+			quickReply(
+				"「世界树」\n" +
+				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+				"\n" +
+				"\u274c " + CLOSED_MSG,
+				bot, msg)
+			return
 		}
 
 		err = setTopic(db, user_a, topic)
