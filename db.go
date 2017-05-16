@@ -24,15 +24,15 @@ import (
 )
 
 func createTables(db *sql.DB) (err error) {
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS admin (user INTEGER UNIQUE)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS admin (user INTEGER PRIMARY KEY)")
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER UNIQUE, b INTEGER)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER PRIMARY KEY, b INTEGER)")
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER UNIQUE, topic STRING)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER PRIMARY KEY, topic STRING)")
 	return
 }
 
