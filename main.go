@@ -85,7 +85,7 @@ func main() {
 			quickReply(
 				"「世界树」\n" +
 				"\n" +
-				"本服务原则上不保留聊天记录，故无法追踪消息编辑状态。\n" +
+				"本服务不保留聊天记录，故无法追踪消息编辑状态。\n" +
 				"由于这个限制，你无法使用消息编辑功能。",
 				bot, edit_msg)
 		}
@@ -139,7 +139,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要离开世界树，请戳 /disconnect 。\n" +
-			"请善待他人，遵守道德和法律。",
+			"请友善待人，遵守道德和法律。",
 			chat + lobby, lobby), bot, msg)
 		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
 			quickReply(
@@ -177,7 +177,7 @@ func handleStart(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 		"\n" +
 		"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 		"若要离开世界树，请戳 /disconnect 。\n" +
-		"请善待他人，遵守道德和法律。",
+		"请友善待人，遵守道德和法律。",
 		chat + lobby, lobby), bot, msg)
 	if !IsOpenHour(time.Now()) && !DEBUG_MODE {
 		quickReply(
@@ -470,7 +470,7 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 			quickReply(
 				"「世界树」\n" +
 				"\n" +
-				"本服务原则上不保留聊天记录，故无法追踪过去的消息。\n" +
+				"本服务不保留聊天记录，故无法追踪过去的消息。\n" +
 				"由于这个限制，你无法使用定向回复功能。",
 				bot, msg)
 		}
@@ -638,9 +638,9 @@ func handleMessage(bot *tgbotapi.BotAPI, db *sql.DB, msg *tgbotapi.Message) {
 				"戳 /leave 离开本次谈话。\n" +
 				"\n"
 			if DEBUG_MODE {
-				match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。"
+				match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。请友善待人，不要分享机密信息。"
 			} else {
-				match_ok += "注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+				match_ok += "注：接下来的聊天内容不会被记录，管理员无法读取，但请友善待人，不要分享机密信息。"
 			}
 			reply := tgbotapi.NewMessage(user_a, match_ok)
 			bot.Send(reply)
@@ -857,9 +857,9 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, db *sql.DB, query *tgbotapi.Callb
 			"戳 /leave 离开本次谈话。\n" +
 			"\n"
 		if DEBUG_MODE {
-			match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。"
+			match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。请友善待人，不要分享机密信息。"
 		} else {
-			match_ok += "注：本服务不保证密码学等级的防窃听，但原则上不保留聊天记录。"
+			match_ok += "注：接下来的聊天内容不会被记录，管理员无法读取，但请友善待人，不要分享机密信息。"
 		}
 		reply := tgbotapi.NewMessage(user_a, match_ok)
 		bot.Send(reply)
