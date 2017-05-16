@@ -32,7 +32,7 @@ func createTables(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER PRIMARY KEY, topic STRING)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER PRIMARY KEY, topic TEXT)")
 	return
 }
 
