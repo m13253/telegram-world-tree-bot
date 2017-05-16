@@ -917,9 +917,7 @@ func broadcastNewTopic(bot *tgbotapi.BotAPI, db *sql.DB, topic string, short_top
 			continue
 		}
 		reply := tgbotapi.NewMessage(users[i],
-			"「世界树」\n" +
-			"\n" +
-			"有人新发布了以下话题：\n" +
+			"【新话题】\n" +
 			"\n" +
 			topic)
 		reply.ReplyMarkup = reply_markup
