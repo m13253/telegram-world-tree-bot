@@ -159,12 +159,11 @@ func (bot *Bot) limitTopic(topic string) string {
 	return topic
 }
 
-func (bot *Bot) quickReply(text string, msg *tgbotapi.Message) (err error) {
+func (bot *Bot) quickReply(text string, msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
 	reply.ReplyToMessageID = msg.MessageID
 	reply.DisableWebPagePreview = true
-	_, err = bot.api.Send(reply)
-	return
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
 }
 
 func (bot *Bot) replyError(err error, msg *tgbotapi.Message) {
