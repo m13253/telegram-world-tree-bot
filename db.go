@@ -23,35 +23,45 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func createTables(db *sql.DB) (err error) {
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS admin (user INTEGER PRIMARY KEY)")
+type dbManager struct {
+	db      *sql.DB
+}
+
+func NewDBManager(db *sql.DB) *dbManager {
+	return &dbManager {
+		db: db,
+	}
+}
+
+func (dbm *dbManager) CreateTables() (err error) {
+	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS admin (user INTEGER PRIMARY KEY)")
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER PRIMARY KEY, b INTEGER)")
+	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS match (a INTEGER PRIMARY KEY, b INTEGER)")
 	if err != nil {
 		return
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER PRIMARY KEY, topic TEXT)")
+	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS lobby (user INTEGER PRIMARY KEY, topic TEXT)")
 	return
 }
 
-func getActiveUsers(db *sql.DB) (chat int, lobby int, err error) {
-	err = db.QueryRow("SELECT count(*) FROM match").Scan(&chat)
+func (dbm *dbManager) GetActiveUsers() (chat int, lobby int, err error) {
+	err = dbm.db.QueryRow("SELECT count(*) FROM match").Scan(&chat)
 	if err != nil {
 		return
 	}
-	err = db.QueryRow("SELECT count(*) FROM lobby").Scan(&lobby)
+	err = dbm.db.QueryRow("SELECT count(*) FROM lobby").Scan(&lobby)
 	return
 }
 
-func queryMatch(db *sql.DB, user_a int64) (user_b int64, err error) {
-	err = db.QueryRow("SELECT b FROM match WHERE a = ? LIMIT 1", user_a).Scan(&user_b)
+func (dbm *dbManager) QueryMatch(user_a int64) (user_b int64, err error) {
+	err = dbm.db.QueryRow("SELECT b FROM match WHERE a = ? LIMIT 1", user_a).Scan(&user_b)
 	return
 }
 
-func connectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
-	tx, err := db.Begin()
+func (dbm *dbManager) ConnectChat(user_a int64, user_b int64) (err error) {
+	tx, err := dbm.db.Begin()
 	if err != nil {
 		return
 	}
@@ -76,19 +86,19 @@ func connectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
 	return
 }
 
-func disconnectChat(db *sql.DB, user_a int64, user_b int64) (err error) {
+func (dbm *dbManager) DisconnectChat(user_a int64, user_b int64) (err error) {
 	if user_b != 0 {
-		_, err = db.Exec("UPDATE match SET b = 0 WHERE a = ?", user_b)
+		_, err = dbm.db.Exec("UPDATE match SET b = 0 WHERE a = ?", user_b)
 	}
-	_, err1 := db.Exec("DELETE FROM match WHERE a = ?", user_a)
+	_, err1 := dbm.db.Exec("DELETE FROM match WHERE a = ?", user_a)
 	if err != nil {
 		return
 	}
 	return err1
 }
 
-func listTopics(db *sql.DB) (topics []string, err error) {
-	rows, err := db.Query("SELECT topic FROM lobby WHERE topic IS NOT NULL ORDER BY random()")
+func (dbm *dbManager) ListTopics() (topics []string, err error) {
+	rows, err := dbm.db.Query("SELECT topic FROM lobby WHERE topic IS NOT NULL ORDER BY random()")
 	if err != nil {
 		return
 	}
@@ -105,8 +115,8 @@ func listTopics(db *sql.DB) (topics []string, err error) {
 	return
 }
 
-func listPendingUsers(db *sql.DB) (users []int64, err error) {
-	rows, err := db.Query("SELECT user FROM lobby ORDER BY random()")
+func (dbm *dbManager) ListPendingUsers() (users []int64, err error) {
+	rows, err := dbm.db.Query("SELECT user FROM lobby ORDER BY random()")
 	if err != nil {
 		return
 	}
@@ -125,49 +135,7 @@ func listPendingUsers(db *sql.DB) (users []int64, err error) {
 			return
 		}
 	}
-	rows, err = db.Query("SELECT a FROM match WHERE b = 0 ORDER BY random()")
-	if err != nil {
-		return
-	}
-	{
-		defer rows.Close()
-		for rows.Next() {
-			var user int64
-			err = rows.Scan(&user)
-			if err != nil {
-				return
-			}
-			users = append(users, user)
-		}
-		err = rows.Err()
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func listAllUsers(db *sql.DB) (users []int64, err error) {
-	rows, err := db.Query("SELECT a FROM match ORDER BY random()")
-	if err != nil {
-		return
-	}
-	{
-		defer rows.Close()
-		for rows.Next() {
-			var user int64
-			err = rows.Scan(&user)
-			if err != nil {
-				return
-			}
-			users = append(users, user)
-		}
-		err = rows.Err()
-		if err != nil {
-			return
-		}
-	}
-	rows, err = db.Query("SELECT user FROM lobby ORDER BY random()")
+	rows, err = dbm.db.Query("SELECT a FROM match WHERE b = 0 ORDER BY random()")
 	if err != nil {
 		return
 	}
@@ -189,59 +157,101 @@ func listAllUsers(db *sql.DB) (users []int64, err error) {
 	return
 }
 
-func setTopic(db *sql.DB, user int64, topic string) (err error) {
-	_, err = db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, ?)", user, topic)
+func (dbm *dbManager) ListAllUsers() (users []int64, err error) {
+	rows, err := dbm.db.Query("SELECT a FROM match ORDER BY random()")
+	if err != nil {
+		return
+	}
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
+		if err != nil {
+			return
+		}
+	}
+	rows, err = dbm.db.Query("SELECT user FROM lobby ORDER BY random()")
+	if err != nil {
+		return
+	}
+	{
+		defer rows.Close()
+		for rows.Next() {
+			var user int64
+			err = rows.Scan(&user)
+			if err != nil {
+				return
+			}
+			users = append(users, user)
+		}
+		err = rows.Err()
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
-func queryTopic(db *sql.DB, topic string) (user int64, err error) {
-	err = db.QueryRow("SELECT user FROM lobby WHERE topic = ? LIMIT 1", topic).Scan(&user)
+func (dbm *dbManager) SetTopic(user int64, topic string) (err error) {
+	_, err = dbm.db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, ?)", user, topic)
+	return
+}
+
+func (dbm *dbManager) QueryTopic(topic string) (user int64, err error) {
+	err = dbm.db.QueryRow("SELECT user FROM lobby WHERE topic = ? LIMIT 1", topic).Scan(&user)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
 	return
 }
 
-func joinLobby(db *sql.DB, user int64) (err error) {
-	_, err = db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, NULL)", user)
+func (dbm *dbManager) JoinLobby(user int64) (err error) {
+	_, err = dbm.db.Exec("INSERT OR REPLACE INTO lobby VALUES (?, NULL)", user)
 	return
 }
 
-func leaveLobby(db *sql.DB, user int64) (err error) {
-	_, err = db.Exec("DELETE FROM lobby WHERE user = ?", user)
+func (dbm *dbManager) LeaveLobby(user int64) (err error) {
+	_, err = dbm.db.Exec("DELETE FROM lobby WHERE user = ?", user)
 	return
 }
 
-func isUserInChat(db *sql.DB, user int64) (ok bool, err error) {
+func (dbm *dbManager) IsUserInChat(user int64) (ok bool, err error) {
 	var count int
-	err = db.QueryRow("SELECT count(*) FROM match WHERE a = ?", user).Scan(&count)
+	err = dbm.db.QueryRow("SELECT count(*) FROM match WHERE a = ?", user).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count != 0, nil
 }
 
-func isUserInLobby(db *sql.DB, user int64) (ok bool, err error) {
+func (dbm *dbManager) IsUserInLobby(user int64) (ok bool, err error) {
 	var count int
-	err = db.QueryRow("SELECT count(*) FROM lobby WHERE user = ?", user).Scan(&count)
+	err = dbm.db.QueryRow("SELECT count(*) FROM lobby WHERE user = ?", user).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count != 0, nil
 }
 
-func isUserInQueue(db *sql.DB, user int64) (ok bool, err error) {
+func (dbm *dbManager) IsUserInQueue(user int64) (ok bool, err error) {
 	var count int
-	err = db.QueryRow("SELECT count(*) FROM lobby WHERE user = ? AND topic IS NOT NULL", user).Scan(&count)
+	err = dbm.db.QueryRow("SELECT count(*) FROM lobby WHERE user = ? AND topic IS NOT NULL", user).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count != 0, nil
 }
 
-func isUserAnAdmin(db *sql.DB, user int64) (ok bool, err error) {
+func (dbm *dbManager) IsUserAnAdmin(user int64) (ok bool, err error) {
 	var count int
-	err = db.QueryRow("SELECT count(*) FROM admin WHERE user = ?", user).Scan(&count)
+	err = dbm.db.QueryRow("SELECT count(*) FROM admin WHERE user = ?", user).Scan(&count)
 	if err != nil {
 		return false, err
 	}
