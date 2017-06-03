@@ -10,4 +10,4 @@ func IsOpenHour(t time.Time) bool {
 	utc := t.UTC()
 	return utc.Hour() >= 13 && utc.Hour() < 22
 }
-const CLOSED_MSG = "世界树只在北京时间每晚 21 点至次日 6 点之间开放。"
+const CLOSED_MSG = "世界树大厅功能只在北京时间每晚 21 点至次日 6 点之间开放。"
