@@ -274,7 +274,7 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 		if err != nil { bot.replyError(err, msg, true) }
 		bot.quickReply(fmt.Sprintf(wait_text, topic), msg)
 		if user_b == 0 {
-			err = bot.broadcastInvitation(topic, topic, user_a, msg)
+			err = bot.broadcastInvitation(topic, topic, user_a)
 			if err != nil { bot.replyError(err, msg, true) }
 		}
 	} else {
@@ -309,7 +309,7 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 	}
 }
 
-func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_user int64, msg *tgbotapi.Message) error {
+func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_user int64) error {
 	users, err := bot.dbm.ListUnmatchedUsers()
 	if err != nil { return err }
 	reply_markup := tgbotapi.NewInlineKeyboardMarkup(
