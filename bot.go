@@ -332,9 +332,7 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 		reply.DisableNotification = true
 		replies = append(replies, reply)
 	}
-	bot.queue.Send(QUEUE_PRIORITY_LOW, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
-		bot.sendBroadcastResult(msg_errors, msg)
-	})
+	bot.queue.Send(QUEUE_PRIORITY_LOW, replies, nil)
 	return nil
 }
 
