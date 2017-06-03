@@ -221,9 +221,9 @@ func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
 	}
 	var text string
 	if failure == 0 {
-		text = fmt.Sprintf("%d \u2705", success)
+		text = fmt.Sprintf("送达：%d \u2705", success)
 	} else {
-		text = fmt.Sprintf("%d \u2705, %d \u2716", success, failure)
+		text = fmt.Sprintf("送达：%d \u2705, %d \u2716", success, failure)
 	}
 	bot.quickReply(text, msg)
 }
