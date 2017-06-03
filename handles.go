@@ -22,19 +22,25 @@ import (
 	"fmt"
 	"time"
 	"strings"
-	"gopkg.in/telegram-bot-api.v4"
-	_ "github.com/mattn/go-sqlite3"
+	// "gopkg.in/telegram-bot-api.v4"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
 	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		bot.quickReply(
 			"「世界树」\n" +
@@ -45,25 +51,18 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Detect whether the user is not in lobby yet.
+	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		chat, lobby, err := bot.dbm.GetActiveUsers()
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		if err != nil { bot.replyError(err, msg, true) }
 		bot.quickReply(fmt.Sprintf(
 			"欢迎使用「世界树」！\n" +
 			"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 			"\n" +
-			"你已进入大厅。在这里，你可以匿名地发布聊天话题。\n" +
-			"如果有人为你点赞，你们将开始一段匿名的私人聊天。\n" +
-			"你至多可发布一条话题，或为一个人点赞，最后一次操作有效。\n" +
+			"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
+			"你也可以输入 /new 来建立一对一的私聊。\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要离开世界树，请戳 /disconnect 。\n" +
@@ -80,28 +79,21 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		bot.sendTopicList(user_a,
 			"「世界树」\n" +
 			"\n" +
-			"你对这些话题感兴趣吗？\n" +
-			"点击感兴趣的话题即可立刻开始聊天：")
+			"以下这些是私聊邀请。\n" +
+			"点击感兴趣的话题即可立刻开始私聊：")
 		return
 	}
 
-	err = bot.dbm.JoinLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	err = bot.dbm.JoinLobby(user_a, 0) // TODO: more lobbies
+	if err != nil { bot.replyError(err, msg, true) }
 	chat, lobby, err := bot.dbm.GetActiveUsers()
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	bot.quickReply(fmt.Sprintf(
 		"欢迎使用「世界树」！\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
-		"你已进入大厅。在这里，你可以匿名地发布聊天话题。\n" +
-		"如果有人为你点赞，你们将开始一段匿名的私人聊天。\n" +
-		"你至多可发布一条话题，或为一个人点赞，最后一次操作有效。\n" +
+		"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
+		"你也可以输入 /new 来建立一对一的私聊。\n" +
 		"\n" +
 		"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 		"若要离开世界树，请戳 /disconnect 。\n" +
@@ -118,42 +110,113 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 	bot.sendTopicList(user_a,
 		"「世界树」\n" +
 		"\n" +
-		"你对这些话题感兴趣吗？\n" +
-		"点击感兴趣的话题即可立刻开始聊天：")
+		"以下这些是私聊邀请。\n" +
+		"点击感兴趣的话题即可立刻开始私聊：")
+}
+
+func (bot *Bot) handleNew(msg *tgbotapi.Message) {
+	user_a := msg.Chat.ID
+
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
+	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		bot.quickReply(
+			"「世界树」\n" +
+			"\n" +
+			"你正在一次会话中。\n" +
+			"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+			msg)
+		return
+	}
+
+	// Detect whether the user is in lobby.
+	ok, err = bot.dbm.IsUserInLobby(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+			bot.quickReply(
+				"「世界树」\n" +
+				"\n" +
+				"\u274c " + CLOSED_MSG,
+				msg)
+			return
+		}
+		topic := strings.TrimSpace(msg.CommandArguments())
+		if topic != "" {
+			short_topic := bot.limitTopic(topic)
+			bot.respondTopic(topic, short_topic, user_a,
+				"「世界树」\n" +
+				"\n" +
+				"你发布了：%s",
+				"「世界树」\n" +
+				"\n" +
+				"你发布了：%s\n" +
+				"\n" +
+				"请等待世界树配对另一个人。\n" +
+				"或戳 /list 看看还有哪些别的话题。",
+				msg)
+		} else {
+			err = bot.dbm.NewPendingInvitation(user_a)
+			if err != nil { bot.replyError(err, msg, true) }
+			bot.askReply(
+				"「世界树」\n" +
+				"\n" +
+				"接下来，请发布一句话题：",
+				msg)
+		}
+		return
+	}
+
+	bot.quickReply(
+		"「世界树」\n" +
+		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+		"\n" +
+		"你尚未连接到世界树。\n" +
+		"何不戳一下 /start 试试看？",
+		msg)
 }
 
 func (bot *Bot) handleList(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	chat, lobby, err := bot.dbm.GetActiveUsers()
-	if err != nil {
-		bot.replyError(err, msg)
-		return
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
 	}
 
 	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		count, err := bot.sendTopicList(user_a, fmt.Sprintf(
+		chat, lobby, err := bot.dbm.GetActiveUsers()
+		if err != nil { bot.replyError(err, msg, true) }
+		num_topics, err := bot.sendTopicList(user_a, fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"以下是大厅内的话题清单：\n",
+			"以下这些是大厅内的私聊邀请：",
 			chat + lobby, lobby))
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-		if count == 0 {
+		if err != nil { bot.replyError(err, msg, true) }
+		if num_topics == 0 {
 			bot.quickReply(fmt.Sprintf(
 				"「世界树」\n" +
 				"\n" +
 				"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-				"当前大厅内没有话题。",
+				"当前没有私聊邀请。",
 				chat + lobby, lobby), msg)
 		}
 		return
@@ -161,29 +224,27 @@ func (bot *Bot) handleList(msg *tgbotapi.Message) {
 
 	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		count, err := bot.sendTopicList(user_a, fmt.Sprintf(
+		chat, lobby, err := bot.dbm.GetActiveUsers()
+		if err != nil { bot.replyError(err, msg, true) }
+		num_topics, err := bot.sendTopicList(user_a, fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
-			"以下是大厅内的话题清单，\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"点击感兴趣的话题即可立刻开始聊天：",
+			"以下这些是大厅内的私聊邀请，\n" +
+			"点击感兴趣的话题即可立刻开始私聊。\n" +
+			"\n" +
+			"你也可以输入 /new 来自定义话题。",
 			chat + lobby, lobby))
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-		if count == 0 {
+		if err != nil { bot.replyError(err, msg, true) }
+		if num_topics == 0 {
 			bot.quickReply(fmt.Sprintf(
 				"「世界树」\n" +
 				"\n" +
 				"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-				"当前大厅内没有话题。\n" +
-				"何不发布一个呢？",
+				"当前没有私聊邀请。\n" +
+				"何不输入 /new 来发布一个呢？",
 				chat + lobby, lobby), msg)
 		}
 		return
@@ -201,39 +262,39 @@ func (bot *Bot) handleList(msg *tgbotapi.Message) {
 func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		bot.quickReply(
+			"「世界树」\n" +
+			"\n" +
+			"已撤销你发布的私聊邀请，\n" +
+			"并回到了大厅。",
+			msg)
 		return
 	}
-	if ok {
-		user_b, err := bot.dbm.QueryMatch(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			// Ignore the error
-		}
-		err = bot.dbm.DisconnectChat(user_a, user_b)
-		if err != nil {
-			bot.replyError(err, msg)
-		}
 
-		err = bot.dbm.JoinLobby(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		user_b, err := bot.dbm.QueryChat(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		err = bot.dbm.DisconnectChat(user_a, user_b)
+		if err != nil { bot.replyError(err, msg, false) }
+
+		err = bot.dbm.JoinLobby(user_a, 0) // TODO: more lobbies
+		if err != nil { bot.replyError(err, msg, true) }
 
 		chat, lobby, err := bot.dbm.GetActiveUsers()
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		if err != nil { bot.replyError(err, msg, true) }
 		bot.quickReply(fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
 			"本次谈话已结束，你已回到大厅。\n" +
-			"何不试试发布下一个聊天话题？\n" +
 			"如果喜欢的话，请推荐世界树 @WorldTreeBot 给朋友。人多才会好玩哩！\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
@@ -242,8 +303,8 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 		bot.sendTopicList(user_a,
 			"「世界树」\n" +
 			"\n" +
-			"你对这些话题感兴趣吗？\n" +
-			"点击感兴趣的话题即可立刻开始聊天：")
+			"以下这些是其它私聊邀请。\n" +
+			"点击感兴趣的话题即可立刻开始私聊：")
 
 		if user_b != 0 {
 			reply := tgbotapi.NewMessage(user_b,
@@ -252,46 +313,34 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 				"对方结束了本次谈话。\n" +
 				"戳 /leave 回到大厅。")
 			_, err = bot.api.Send(reply)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
+			if err != nil { bot.replyError(err, msg, true) }
 		}
 		return
 	}
 
 	// Detect whether the user is in queue.
 	ok, err = bot.dbm.IsUserInQueue(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		err := bot.dbm.JoinLobby(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		err := bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, true) }
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"已取消你最后发布的话题。\n" +
-			"若要断开与世界树的连接，请戳 /disconnect 。",
+			"已撤销你发布的私聊邀请，\n" +
+			"并回到了大厅。",
 			msg)
 		return
 	}
 
 	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"你当前没有发布任何话题。\n" +
+			"你已经在大厅了。\n" +
 			"若要断开与世界树的连接，请戳 /disconnect 。",
 			msg)
 		return
@@ -309,12 +358,18 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 func (bot *Bot) handleDisconnect(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
 	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		bot.quickReply(
 			"「世界树」\n" +
@@ -327,16 +382,12 @@ func (bot *Bot) handleDisconnect(msg *tgbotapi.Message) {
 
 	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
 		err = bot.dbm.LeaveLobby(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		if err != nil { bot.replyError(err, msg, false) }
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
@@ -361,20 +412,43 @@ func (bot *Bot) handleDisconnect(msg *tgbotapi.Message) {
 func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		printLog(msg.From, "(topic) " + msg.Text, false)
+		topic := strings.TrimSpace(msg.Text)
+		if topic == "" {
+			bot.askReply(
+				"「世界树」\n" +
+				"\n" +
+				"接下来，请发布一句话题：",
+				msg)
+			return
+		}
+		short_topic := bot.limitTopic(topic)
+		bot.respondTopic(topic, short_topic, user_a,
+			"「世界树」\n" +
+			"\n" +
+			"你发布了：%s",
+			"「世界树」\n" +
+			"\n" +
+			"你发布了：%s\n" +
+			"\n" +
+			"请等待世界树配对另一个人。\n" +
+			"或戳 /list 看看还有哪些别的话题。",
+			msg)
 		return
 	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		printLog(msg.From, msg.Text, true)
 
-		user_b, err := bot.dbm.QueryMatch(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		user_b, err := bot.dbm.QueryChat(user_a)
+		if err != nil { bot.replyError(err, msg, true) }
 		if user_b == 0 {
 			bot.quickReply(
 				"「世界树」\n" +
@@ -385,16 +459,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			return
 		}
 
-		// Forward the message to the partner
-		if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
-			fwd := tgbotapi.NewForward(user_b, msg.Chat.ID, msg.MessageID)
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-			return
-		}
-		if msg.ReplyToMessage != nil {
+		if msg.ReplyToMessage != nil && msg.ForwardFrom == nil && msg.ForwardFromChat == nil {
 			bot.quickReply(
 				"「世界树」\n" +
 				"\n" +
@@ -402,185 +467,50 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 				"由于这个限制，你无法使用定向回复功能。",
 				msg)
 		}
-		if msg.Text != "" {
-			fwd := tgbotapi.NewMessage(user_b, msg.Text)
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Audio != nil {
-			fwd := tgbotapi.NewAudioShare(user_b, msg.Audio.FileID)
-			fwd.Caption = msg.Caption
-			fwd.Duration = msg.Audio.Duration
-			fwd.Performer = msg.Audio.Performer
-			fwd.Title = msg.Audio.Title
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Document != nil {
-			fwd := tgbotapi.NewDocumentShare(user_b, msg.Document.FileID)
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Photo != nil {
-			if len(*msg.Photo) != 0 {
-				fwd := tgbotapi.NewPhotoShare(user_b, (*msg.Photo)[0].FileID)
-				fwd.Caption = msg.Caption
-				_, err = bot.api.Send(fwd)
-				if err != nil {
-					bot.replyError(err, msg)
-				}
-			}
-		}
-		if msg.Sticker != nil {
-			fwd := tgbotapi.NewStickerShare(user_b, msg.Sticker.FileID)
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Video != nil {
-			fwd := tgbotapi.NewVideoShare(user_b, msg.Video.FileID)
-			fwd.Duration = msg.Video.Duration
-			fwd.Caption = msg.Caption
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Voice != nil {
-			fwd := tgbotapi.NewVoiceShare(user_b, msg.Voice.FileID)
-			fwd.Caption = msg.Caption
-			fwd.Duration = msg.Voice.Duration
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Contact != nil {
-			fwd := tgbotapi.NewContact(user_b, msg.Contact.PhoneNumber, msg.Contact.FirstName)
-			fwd.LastName = msg.Contact.LastName
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Location != nil {
-			fwd := tgbotapi.NewLocation(user_b, msg.Location.Latitude, msg.Location.Longitude)
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
-		if msg.Venue != nil {
-			fwd := tgbotapi.NewVenue(user_b, msg.Venue.Title, msg.Venue.Address, msg.Venue.Location.Latitude, msg.Venue.Location.Longitude)
-			fwd.FoursquareID = msg.Venue.FoursquareID
-			_, err = bot.api.Send(fwd)
-			if err != nil {
-				bot.replyError(err, msg)
-			}
-		}
+
+		// Forward the message to the partner
+		reply := bot.generateForwardMessage(user_b, msg, false)
+		bot.queue.Send(QUEUE_PRIORITY_NORMAL, []tgbotapi.Chattable { reply }, nil)
 		return
 	}
-
-	printLog(msg.From, "(lobby) " + msg.Text, false)
 
 	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		topic := strings.TrimSpace(msg.Text)
-		short_topic := bot.limitTopic(topic)
-		if topic == "" {
-			return
-		}
-		user_b, err := bot.dbm.QueryTopic(short_topic)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-		if user_b == 0 || user_b == user_a {
-			if !IsOpenHour(time.Now()) && !DEBUG_MODE {
-				bot.quickReply(
-					"「世界树」\n" +
-					"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-					"\n" +
-					"\u274c " + CLOSED_MSG,
-					msg)
-				return
-			}
+		printLog(msg.From, "(lobby) " + msg.Text, false)
 
-			err = bot.dbm.SetTopic(user_a, short_topic)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
+		room, err := bot.dbm.QueryLobby(user_a)
+		if err != nil { bot.replyError(err, msg, true) }
+
+		users, err := bot.dbm.ListUsersInLobby(room)
+		if err != nil { bot.replyError(err, msg, true) }
+
+		if msg.ReplyToMessage != nil && msg.ForwardFrom == nil && msg.ForwardFromChat == nil {
 			bot.quickReply(
 				"「世界树」\n" +
 				"\n" +
-				"你发布了：" + topic + "\n" +
-				"\n" +
-				"请等待世界树配对一个点赞的人。\n" +
-				"或戳 /list 看看还有哪些话题。",
+				"本服务不保留聊天记录，故无法追踪过去的消息。\n" +
+				"由于这个限制，你无法使用定向回复功能。",
 				msg)
-			go bot.broadcastNewTopic(topic, short_topic, user_a)
-		} else {
-			// Found a match
-			err = bot.dbm.LeaveLobby(user_a)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
-			err = bot.dbm.LeaveLobby(user_b)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
-
-			bot.quickReply(
-				"「世界树」\n" +
-				"\n" +
-				"你发布了：" + topic + "\n" +
-				"\n" +
-				"请等待世界树配对一个点赞的人。",
-				msg)
-
-			err = bot.dbm.ConnectChat(user_a, user_b)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
-
-			match_ok := "「世界树」\n" +
-				"\n" +
-				"\U0001f495 会话已接通，祝你们聊天愉快。\n" +
-				"话题：" + topic + "\n" +
-				"戳 /leave 离开本次谈话。\n" +
-				"\n"
-			if DEBUG_MODE {
-				match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。请友善待人，不要分享机密信息。"
-			} else {
-				match_ok += "注：接下来的聊天内容不会被记录，管理员无法读取，但请友善待人，不要分享机密信息。"
-			}
-			reply := tgbotapi.NewMessage(user_a, match_ok)
-			bot.api.Send(reply)
-			reply = tgbotapi.NewMessage(user_b, match_ok)
-			_, err = bot.api.Send(reply)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
 		}
+
+		// Forward the message to all users in the lobby
+		replies := make([]tgbotapi.Chattable, 0, len(users))
+		for i := range users {
+			if users[i] == user_a {
+				continue
+			}
+			reply := bot.generateForwardMessage(users[i], msg, true)
+			replies = append(replies, reply)
+		}
+		bot.queue.Send(QUEUE_PRIORITY_LOW, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
+			bot.sendBroadcastResult(msg_errors, msg)
+		})
 		return
 	}
+
+	printLog(msg.From, "(disconnected) " + msg.Text, false)
 
 	bot.quickReply(
 		"「世界树」\n" +
@@ -594,32 +524,37 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 func (bot *Bot) handleWall(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
 
-	// Detect whether the user is an admininistrator.
-	ok, err := bot.dbm.IsUserAnAdmin(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
 	}
+
+	// Detect whether the user is an admininistrator.
+	ok, err = bot.dbm.IsUserAnAdmin(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		alert := strings.TrimSpace(msg.CommandArguments())
 		if alert == "" {
 			return
 		}
-		go func() {
-			users, err := bot.dbm.ListAllUsers()
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
-			for i := range users {
-				reply := tgbotapi.NewMessage(users[i],
-					"「世界树」\n" +
-					"\n" +
-					"系统公告：\n" +
-					alert)
-				bot.api.Send(reply)
-			}
-		}()
+		users, err := bot.dbm.ListAllUsers()
+		if err != nil { bot.replyError(err, msg, true) }
+		replies := make([]tgbotapi.Chattable, 0, len(users))
+		for i := range users {
+			reply := tgbotapi.NewMessage(users[i],
+				"「世界树」\n" +
+				"\n" +
+				"系统公告：\n" +
+				alert)
+			replies = append(replies, reply)
+		}
+		bot.queue.Send(QUEUE_PRIORITY_HIGH, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
+			bot.sendBroadcastResult(msg_errors, msg)
+		})
 		return
 	}
 
@@ -631,10 +566,7 @@ func (bot *Bot) handleInvalid(msg *tgbotapi.Message) {
 
 	// Detect whether the user is in chat.
 	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		bot.handleMessage(msg)
 		return
@@ -642,10 +574,7 @@ func (bot *Bot) handleInvalid(msg *tgbotapi.Message) {
 
 	// Detect whether the user is in lobby.
 	ok, err = bot.dbm.IsUserInLobby(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		bot.quickReply(
 			"「世界树」\n" +
@@ -674,18 +603,30 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 
 	printLog(query.From, "(menu) " + query.Data, false)
 
-	// Detect whether the user is in chat.
-	ok, err := bot.dbm.IsUserInChat(user_a)
-	if err != nil {
-		bot.replyError(err, msg)
+	topic := query.Data
+	if topic == "" {
 		return
 	}
+	bot.api.AnswerCallbackQuery(tgbotapi.CallbackConfig {
+		CallbackQueryID: query.ID,
+		Text: "正在加入：" + topic,
+	})
+
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		user_b, err := bot.dbm.QueryMatch(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
+	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		user_b, err := bot.dbm.QueryChat(user_a)
+		if err != nil { bot.replyError(err, msg, true) }
 		if user_b != 0 {
 			bot.quickReply(
 				"「世界树」\n" +
@@ -693,109 +634,25 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 				"你正在一次会话中。\n" +
 				"先戳 /leave 离开本次谈话，才能开始下一个会话。",
 				msg)
-			bot.api.AnswerCallbackQuery(tgbotapi.CallbackConfig {
-				CallbackQueryID: query.ID,
-			})
 			return
 		} else {
 			err := bot.dbm.DisconnectChat(user_a, 0)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
-			err = bot.dbm.JoinLobby(user_a)
-			if err != nil {
-				bot.replyError(err, msg)
-				return
-			}
+			if err != nil { bot.replyError(err, msg, true) }
+			err = bot.dbm.JoinLobby(user_a, 0) // TODO: more lobbies
+			if err != nil { bot.replyError(err, msg, true) }
+			// fall-through
 		}
 	}
 
-	topic := query.Data
-	if topic == "" {
-		return
-	}
-	bot.api.AnswerCallbackQuery(tgbotapi.CallbackConfig {
-		CallbackQueryID: query.ID,
-		Text: "你 \u2764\ufe0f 了：" + topic,
-	})
-	user_b, err := bot.dbm.QueryTopic(topic)
-	if err != nil {
-		bot.replyError(err, msg)
-		return
-	}
-	if user_b == 0 || user_b == user_a {
-		// The topic has gone.
-		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
-			bot.quickReply(
-				"「世界树」\n" +
-				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-				"\n" +
-				"\u274c " + CLOSED_MSG,
-				msg)
-			return
-		}
-
-		err = bot.dbm.SetTopic(user_a, topic)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-		bot.quickReply(
-			"「世界树」\n" +
-			"\n" +
-			"你 \u2764\ufe0f 了：" + topic + "\n" +
-			"\n" +
-			"请等待世界树配对另一个点赞的人。\n" +
-			"或戳 /list 看看还有哪些话题。",
-			msg)
-		if user_b == 0 {
-			go bot.broadcastNewTopic(topic, topic, user_a)
-		}
-	} else {
-		err = bot.dbm.LeaveLobby(user_a)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-		err = bot.dbm.LeaveLobby(user_b)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-
-		bot.quickReply(
-			"「世界树」\n" +
-			"\n" +
-			"你 \u2764\ufe0f 了：" + topic + "\n" +
-			"\n" +
-			"请等待世界树配对另一个点赞的人。",
-			msg)
-
-		err = bot.dbm.ConnectChat(user_a, user_b)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-
-		match_ok := "「世界树」\n" +
-			"\n" +
-			"\U0001f495 会话已接通，祝你们聊天愉快。\n" +
-			"话题：" + topic + "\n" +
-			"戳 /leave 离开本次谈话。\n" +
-			"\n"
-		if DEBUG_MODE {
-			match_ok += "注：当前程序运行在调试模式下，管理员可能会看到聊天记录。请友善待人，不要分享机密信息。"
-		} else {
-			match_ok += "注：接下来的聊天内容不会被记录，管理员无法读取，但请友善待人，不要分享机密信息。"
-		}
-		reply := tgbotapi.NewMessage(user_a, match_ok)
-		bot.api.Send(reply)
-		reply = tgbotapi.NewMessage(user_b, match_ok)
-		_, err = bot.api.Send(reply)
-		if err != nil {
-			bot.replyError(err, msg)
-			return
-		}
-	}
+	bot.respondTopic(topic, topic, user_a,
+		"「世界树」\n" +
+		"\n" +
+		"正在加入话题：%s",
+		"「世界树」\n" +
+		"\n" +
+		"正在加入话题：%s\n" +
+		"\n" +
+		"请等待世界树配对另一个人。\n" +
+		"或戳 /list 看看还有哪些别的话题。",
+		msg)
 }

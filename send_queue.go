@@ -22,7 +22,9 @@ import (
     "container/list"
     "log"
     "sync"
-	"gopkg.in/telegram-bot-api.v4"
+    "time"
+    // "gopkg.in/telegram-bot-api.v4"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 type sendQueueItem struct {
@@ -145,16 +147,19 @@ func (q *sendQueue) dispatchMessages() {
 }
 
 func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
+    i := item.msg_index
+    item.msg_index = i + 1
+
+    delay := time.After(40 * time.Millisecond)
+
     result := new(tgbotapi.Message)
     var err error
-
-    i := item.msg_index
     *result, err = q.bot.Send(item.msg_config[i])
-
     item.msg_result[i], item.msg_errors[i] = result, err
-    item.msg_index = i + 1
 
     if err != nil {
         log.Printf("Send failed: %+v\n", err)
     }
+
+    <-delay
 }
