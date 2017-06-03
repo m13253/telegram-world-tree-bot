@@ -21,6 +21,7 @@ package main
 import (
     "container/list"
     "log"
+    "reflect"
     "sync"
     "time"
     // "gopkg.in/telegram-bot-api.v4"
@@ -152,14 +153,18 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
 
     delay := time.After(40 * time.Millisecond)
 
-    result := new(tgbotapi.Message)
-    var err error
-    *result, err = q.bot.Send(item.msg_config[i])
-    item.msg_result[i], item.msg_errors[i] = result, err
+    go func() {
+        result := new(tgbotapi.Message)
+        var err error
+        *result, err = q.bot.Send(item.msg_config[i])
+        item.msg_result[i], item.msg_errors[i] = result, err
 
-    if err != nil {
-        log.Printf("Send failed: %+v\n", err)
-    }
+        if err != nil {
+            reflect_msg := reflect.ValueOf(item.msg_config[i])
+            chat_id := reflect_msg.FieldByName("ChatID").Interface()
+            log.Printf("Send to #%+v failed: %+v\n", chat_id, err)
+        }
+    } ()
 
     <-delay
 }
