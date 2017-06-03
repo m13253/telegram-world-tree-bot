@@ -470,7 +470,9 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 
 		// Forward the message to the partner
 		reply := bot.generateForwardMessage(user_b, msg, false)
-		bot.queue.Send(QUEUE_PRIORITY_NORMAL, []tgbotapi.Chattable { reply }, nil)
+		bot.queue.Send(QUEUE_PRIORITY_NORMAL, []tgbotapi.Chattable { reply }, func(msg_result []*tgbotapi.Message, msg_errors []error) {
+			bot.replyError(msg_errors[0], msg, false)
+		})
 		return
 	}
 
