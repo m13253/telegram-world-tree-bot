@@ -349,7 +349,7 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 		if fatal {
 			panic(err)
 		} else {
-			log.Println("Error: %+v\n", err)
+			log.Printf("Error: %+v\n", err)
 		}
 	}
 }
