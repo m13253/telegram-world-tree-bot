@@ -23,6 +23,7 @@ import (
     "log"
     "reflect"
     "sync"
+    "sync/atomic"
     "time"
     // "gopkg.in/telegram-bot-api.v4"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
@@ -34,6 +35,7 @@ type sendQueueItem struct {
     msg_result  []*tgbotapi.Message
     msg_errors  []error
     msg_index   int
+    msg_finish  uintptr
     callback    func ([]*tgbotapi.Message, []error)
 }
 
@@ -72,6 +74,7 @@ func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback
         msg_result: make([]*tgbotapi.Message, len(msg_config)),
         msg_errors: make([]error, len(msg_config)),
         msg_index:  0,
+        msg_finish: 0,
         callback:   callback,
     }
     var msg_list *list.List
@@ -102,9 +105,6 @@ func (q *sendQueue) dispatchMessages() {
             if item.msg_index == len(item.msg_config) {
                 q.high.Remove(el)
                 q.lock.Unlock()
-                if item.callback != nil {
-                    item.callback(item.msg_result, item.msg_errors)
-                }
             } else {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
@@ -115,9 +115,6 @@ func (q *sendQueue) dispatchMessages() {
             if item.msg_index == len(item.msg_config) {
                 q.normal.Remove(el)
                 q.lock.Unlock()
-                if item.callback != nil {
-                    item.callback(item.msg_result, item.msg_errors)
-                }
             } else {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
@@ -128,9 +125,6 @@ func (q *sendQueue) dispatchMessages() {
             if item.msg_index == len(item.msg_config) {
                 q.low.Remove(el)
                 q.lock.Unlock()
-                if item.callback != nil {
-                    item.callback(item.msg_result, item.msg_errors)
-                }
             } else {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
@@ -163,6 +157,12 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
             reflect_msg := reflect.ValueOf(item.msg_config[i])
             chat_id := reflect_msg.FieldByName("ChatID").Interface()
             log.Printf("Send to #%+v failed: %+v\n", chat_id, err)
+        }
+
+        if int(atomic.AddUintptr(&item.msg_finish, 1)) == len(item.msg_config) {
+            if item.callback != nil {
+                item.callback(item.msg_result, item.msg_errors)
+            }
         }
     } ()
 
