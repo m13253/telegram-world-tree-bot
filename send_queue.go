@@ -85,17 +85,14 @@ func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback
     default:
         panic("Unknown priority")
     }
-    log.Printf("[QueueSend] Begin")
     q.lock.Lock()
     msg_list.PushBack(item)
     q.lock.Unlock()
     q.cv.Signal()
-    log.Printf("[QueueSend] End")
 }
 
 func (q *sendQueue) dispatchMessages() {
     for {
-        log.Printf("[QueueRecv] Begin")
         q.lock.Lock()
         if el := q.high.Front(); el != nil {
             item := el.Value.(*sendQueueItem)
@@ -109,7 +106,6 @@ func (q *sendQueue) dispatchMessages() {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
             }
-            log.Printf("[QueueRecv] High")
         } else if el := q.normal.Front(); el != nil {
             item := el.Value.(*sendQueueItem)
             if item.msg_index == len(item.msg_config) {
@@ -122,7 +118,6 @@ func (q *sendQueue) dispatchMessages() {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
             }
-            log.Printf("[QueueRecv] Normal")
         } else if el := q.low.Front(); el != nil {
             item := el.Value.(*sendQueueItem)
             if item.msg_index == len(item.msg_config) {
@@ -135,14 +130,11 @@ func (q *sendQueue) dispatchMessages() {
                 q.lock.Unlock()
                 q.dispatchMessage(item)
             }
-            log.Printf("[QueueRecv] Low")
         } else {
-            log.Printf("[QueueRecv] Wait")
             q.cv.L.Lock()
             q.lock.Unlock()
             q.cv.Wait()
             q.cv.L.Unlock()
-            log.Printf("[QueueRecv] Wake")
         }
     }
 }
