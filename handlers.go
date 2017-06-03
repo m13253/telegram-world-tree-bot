@@ -654,5 +654,5 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		"\n" +
 		"请等待世界树配对另一个人。\n" +
 		"或戳 /list 看看还有哪些别的话题。",
-		nil)
+		msg)
 }
