@@ -221,11 +221,14 @@ func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
 	}
 	var text string
 	if failure == 0 {
-		text = fmt.Sprintf("送达：%d \u2705", success)
+		text = fmt.Sprintf("\u2705送达：%d", success)
 	} else {
-		text = fmt.Sprintf("送达：%d \u2705, %d \u2716", success, failure)
+		text = fmt.Sprintf("\u2705送达：%d，\u2716失败：%d", success, failure)
 	}
-	bot.quickReply(text, msg)
+	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	reply.DisableNotification = true
+	reply.ReplyToMessageID = msg.MessageID
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
 }
 
 func (bot *Bot) sendTopicList(user int64, caption string) (count int, err error) {
