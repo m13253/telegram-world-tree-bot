@@ -560,9 +560,8 @@ func (bot *Bot) handleWall(msg *tgbotapi.Message) {
 		replies := make([]tgbotapi.Chattable, 0, len(users))
 		for i := range users {
 			reply := tgbotapi.NewMessage(users[i],
-				"「世界树」\n" +
+				"【系统公告】\n" +
 				"\n" +
-				"系统公告：\n" +
 				alert)
 			replies = append(replies, reply)
 		}
