@@ -143,14 +143,6 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 	ok, err = bot.dbm.IsUserInLobby(user_a)
 	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
-		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
-			bot.quickReply(
-				"「世界树」\n" +
-				"\n" +
-				"\u274c " + CLOSED_MSG,
-				msg)
-			return
-		}
 		topic := strings.TrimSpace(msg.CommandArguments())
 		if topic != "" {
 			short_topic := bot.limitTopic(topic)
@@ -166,6 +158,14 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 				"或戳 /list 看看还有哪些别的话题。",
 				msg)
 		} else {
+			if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+				bot.quickReply(
+					"「世界树」\n" +
+					"\n" +
+					"\u274c " + CLOSED_MSG,
+					msg)
+				return
+			}
 			err = bot.dbm.NewPendingInvitation(user_a)
 			if err != nil { bot.replyError(err, msg, true) }
 			bot.askReply(
@@ -426,6 +426,8 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 				msg)
 			return
 		}
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, true) }
 		short_topic := bot.limitTopic(topic)
 		bot.respondTopic(topic, short_topic, user_a,
 			"「世界树」\n" +
@@ -481,6 +483,16 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 	if err != nil { bot.replyError(err, msg, true) }
 	if ok {
 		printLog(msg.From, "(lobby) " + msg.Text, false)
+
+		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
+			bot.quickReply(
+				"「世界树」\n" +
+				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+				"\n" +
+				"\u274c " + CLOSED_MSG,
+				msg)
+			return
+		}
 
 		room, err := bot.dbm.QueryLobby(user_a)
 		if err != nil { bot.replyError(err, msg, true) }
