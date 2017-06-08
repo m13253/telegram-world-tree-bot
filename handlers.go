@@ -57,17 +57,19 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 	if ok {
 		chat, lobby, err := bot.dbm.GetActiveUsers()
 		if err != nil { bot.replyError(err, msg, true) }
+		user_hash := bot.hashIdentification(msg.Chat)
 		bot.quickReply(fmt.Sprintf(
 			"欢迎使用「世界树」！\n" +
 			"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 			"\n" +
 			"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
+			"你今天的群聊身份为 [%s]，每日自动更换。\n" +
 			"你也可以输入 /new 来建立一对一的私聊。\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要离开世界树，请戳 /disconnect 。\n" +
 			"请友善待人，遵守道德和法律。",
-			chat + lobby, lobby), msg)
+			user_hash, chat + lobby, lobby), msg)
 		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
 			bot.quickReply(
 				"「世界树」\n" +
@@ -88,17 +90,19 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 	if err != nil { bot.replyError(err, msg, true) }
 	chat, lobby, err := bot.dbm.GetActiveUsers()
 	if err != nil { bot.replyError(err, msg, true) }
+	user_hash := bot.hashIdentification(msg.Chat)
 	bot.quickReply(fmt.Sprintf(
 		"欢迎使用「世界树」！\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
 		"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
+		"你今天的群聊身份为 [%s]，每日自动更换。\n" +
 		"你也可以输入 /new 来建立一对一的私聊。\n" +
 		"\n" +
 		"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 		"若要离开世界树，请戳 /disconnect 。\n" +
 		"请友善待人，遵守道德和法律。",
-		chat + lobby, lobby), msg)
+		user_hash, chat + lobby, lobby), msg)
 	if !IsOpenHour(time.Now()) && !DEBUG_MODE {
 		bot.quickReply(
 			"「世界树」\n" +
@@ -471,8 +475,9 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 		}
 
 		// Forward the message to the partner
-		reply := bot.generateForwardMessage(user_b, msg, false)
-		bot.queue.Send(QUEUE_PRIORITY_NORMAL, []tgbotapi.Chattable { reply }, func(msg_result []*tgbotapi.Message, msg_errors []error) {
+		replies := make([]tgbotapi.Chattable, 0, 2)
+		replies = bot.generateForwardMessage(replies, user_b, "", msg, false)
+		bot.queue.Send(QUEUE_PRIORITY_NORMAL, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
 			bot.replyError(msg_errors[0], msg, false)
 		})
 		return
@@ -510,16 +515,15 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 		}
 
 		// Forward the message to all users in the lobby
-		replies := make([]tgbotapi.Chattable, 0, len(users))
+		replies := make([]tgbotapi.Chattable, 0, len(users) * 2)
 		for i := range users {
 			if users[i] == user_a {
 				continue
 			}
-			reply := bot.generateForwardMessage(users[i], msg, true)
-			replies = append(replies, reply)
+			replies = bot.generateForwardMessage(replies, users[i], bot.hashIdentification(msg.Chat), msg, true)
 		}
 		bot.queue.Send(QUEUE_PRIORITY_LOW, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
-			bot.sendBroadcastResult(msg_errors, msg)
+			bot.logBroadcastResult(msg_errors, msg)
 		})
 		return
 	}
