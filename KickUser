@@ -8,13 +8,14 @@ echo "-- Remember to back up your database before you execute!"
 echo "BEGIN TRANSACTION;"
 for i in "$@"
 do
+    user_a="${i#\#}"  # Strip out the prefix '#'
     # Kick from chat
-    echo "UPDATE chat SET user_b = 0 WHERE user_a = $i;"
-    echo "DELETE FROM chat WHERE user_a = $i;"
+    echo "UPDATE chat SET user_b = 0 WHERE user_a = $user_a;"
+    echo "DELETE FROM chat WHERE user_a = $user_a;"
     # Kick from invites
-    echo "DELETE FROM invite WHERE user = $i;"
+    echo "DELETE FROM invite WHERE user = $user_a;"
     # Kick from lobby
-    echo "DELETE FROM lobby WHERE user = $i;"
+    echo "DELETE FROM lobby WHERE user = $user_a;"
 done
 echo "COMMIT;"
 echo "-- Remember to back up your database before you execute!"
