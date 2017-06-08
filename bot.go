@@ -19,6 +19,8 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
@@ -131,82 +133,151 @@ func (bot *Bot) askReply(text string, msg *tgbotapi.Message) {
 	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
 }
 
-func (bot *Bot) generateForwardMessage(dest int64, msg *tgbotapi.Message, disable_notification bool) tgbotapi.Chattable {
+func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, dest int64, nick string, msg *tgbotapi.Message, disable_notification bool) []tgbotapi.Chattable {
+	num_existing_replies := len(existing_replies)
+	has_nick := nick != ""
 	if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
 		fwd := tgbotapi.NewForward(dest, msg.Chat.ID, msg.MessageID)
 		fwd.DisableNotification = disable_notification
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Text != "" {
-		fwd := tgbotapi.NewMessage(dest, msg.Text)
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Text
+		} else {
+			text = msg.Text
+		}
+		fwd := tgbotapi.NewMessage(dest, text)
 		fwd.DisableNotification = disable_notification
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Audio != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
 		fwd := tgbotapi.NewAudioShare(dest, msg.Audio.FileID)
 		fwd.DisableNotification = disable_notification
 		fwd.Caption = msg.Caption
 		fwd.Duration = msg.Audio.Duration
 		fwd.Performer = msg.Audio.Performer
 		fwd.Title = msg.Audio.Title
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Document != nil {
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Caption
+		} else {
+			text = msg.Caption
+		}
 		fwd := tgbotapi.NewDocumentShare(dest, msg.Document.FileID)
 		fwd.DisableNotification = disable_notification
-		fwd.Caption = msg.Caption
-		return fwd
+		fwd.Caption = text
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Photo != nil {
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Caption
+		} else {
+			text = msg.Caption
+		}
 		if len(*msg.Photo) != 0 {
 			fwd := tgbotapi.NewPhotoShare(dest, (*msg.Photo)[0].FileID)
 			fwd.DisableNotification = disable_notification
-			fwd.Caption = msg.Caption
-			return fwd
+			fwd.Caption = text
+			existing_replies = append(existing_replies, fwd)
 		}
 	}
 	if msg.Sticker != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
 		fwd := tgbotapi.NewStickerShare(dest, msg.Sticker.FileID)
 		fwd.DisableNotification = disable_notification
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Video != nil {
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Caption
+		} else {
+			text = msg.Caption
+		}
 		fwd := tgbotapi.NewVideoShare(dest, msg.Video.FileID)
 		fwd.DisableNotification = disable_notification
 		fwd.Duration = msg.Video.Duration
-		fwd.Caption = msg.Caption
-		return fwd
+		fwd.Caption = text
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Voice != nil {
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Caption
+		} else {
+			text = msg.Caption
+		}
 		fwd := tgbotapi.NewVoiceShare(dest, msg.Voice.FileID)
 		fwd.DisableNotification = disable_notification
-		fwd.Caption = msg.Caption
+		fwd.Caption = text
 		fwd.Duration = msg.Voice.Duration
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Contact != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
 		fwd := tgbotapi.NewContact(dest, msg.Contact.PhoneNumber, msg.Contact.FirstName)
 		fwd.DisableNotification = disable_notification
 		fwd.LastName = msg.Contact.LastName
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Location != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
 		fwd := tgbotapi.NewLocation(dest, msg.Location.Latitude, msg.Location.Longitude)
 		fwd.DisableNotification = disable_notification
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
 	if msg.Venue != nil {
-		fwd := tgbotapi.NewVenue(dest, msg.Venue.Title, msg.Venue.Address, msg.Venue.Location.Latitude, msg.Venue.Location.Longitude)
+		var text string
+		if has_nick {
+			text = "[" + nick + "] " + msg.Venue.Title
+		} else {
+			text = msg.Venue.Title
+		}
+		fwd := tgbotapi.NewVenue(dest, text, msg.Venue.Address, msg.Venue.Location.Latitude, msg.Venue.Location.Longitude)
 		fwd.DisableNotification = disable_notification
 		fwd.FoursquareID = msg.Venue.FoursquareID
-		return fwd
+		existing_replies = append(existing_replies, fwd)
 	}
-	bot.quickReply(
-		"「世界树」\n" +
-		"\n" +
-		"刚刚的消息无法识别，可能没有送达。",
-		msg)
-	return nil
+	if num_existing_replies == len(existing_replies) {
+		var text string
+		if has_nick {
+			text = "[" + nick + "] [不支持的消息]"
+		} else {
+			text = "[不支持的消息]"
+		}
+		fwd := tgbotapi.NewMessage(dest, text)
+		fwd.DisableNotification = disable_notification
+		existing_replies = append(existing_replies, fwd)
+	}
+	return existing_replies
 }
 
 func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
@@ -219,6 +290,7 @@ func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
 			failure++
 		}
 	}
+	log.Printf("Sent / failed: %d / %d", success, failure)
 	var text string
 	if failure == 0 {
 		text = fmt.Sprintf("\u2705送达：%d", success)
@@ -229,6 +301,19 @@ func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
 	reply.DisableNotification = true
 	reply.ReplyToMessageID = msg.MessageID
 	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
+}
+
+func (bot *Bot) logBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
+	success := 0
+	failure := 0
+	for i := range msg_errors {
+		if msg_errors[i] == nil {
+			success++
+		} else {
+			failure++
+		}
+	}
+	log.Printf("Sent / failed: %d / %d", success, failure)
 }
 
 func (bot *Bot) sendTopicList(user int64, caption string) (count int, err error) {
@@ -352,6 +437,12 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 			log.Printf("Error: %+v\n", err)
 		}
 	}
+}
+
+func (bot *Bot) hashIdentification(chat *tgbotapi.Chat) string {
+	date_seed := (time.Now().Unix() - 3 * 3600) / 86400
+	hash_sum := sha1.Sum([]byte(fmt.Sprintf("%s %x %x %s %x %s %x", SECRET, chat.ID, len(chat.FirstName), chat.FirstName, len(chat.LastName), chat.LastName, date_seed)))
+	return base64.RawURLEncoding.EncodeToString(hash_sum[:6])
 }
 
 func (bot *Bot) limitTopic(topic string) string {
