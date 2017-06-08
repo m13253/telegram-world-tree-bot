@@ -220,6 +220,17 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 		fwd.Caption = text
 		existing_replies = append(existing_replies, fwd)
 	}
+	if msg.VideoNote != nil {
+		if has_nick {
+			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick.DisableNotification = disable_notification
+			existing_replies = append(existing_replies, fwd_nick)
+		}
+		fwd := tgbotapi.NewVideoNoteShare(dest, msg.VideoNote.Length, msg.VideoNote.FileID)
+		fwd.DisableNotification = disable_notification
+		fwd.Duration = msg.VideoNote.Duration
+		existing_replies = append(existing_replies, fwd)
+	}
 	if msg.Voice != nil {
 		var text string
 		if has_nick {
