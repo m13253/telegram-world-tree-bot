@@ -1,0 +1,20 @@
+#!/bin/bash
+if [ "$#" -eq 0 ]
+then
+    echo "-- Usage: ./KickUser user1 [user2 user3 ...]"
+    exit
+fi
+echo "-- Remember to back up your database before you execute!"
+echo "BEGIN TRANSACTION;"
+for i in "$@"
+do
+    # Kick from chat
+    echo "UPDATE chat SET user_b = 0 WHERE user_a = $i;"
+    echo "DELETE FROM chat WHERE user_a = $i;"
+    # Kick from invites
+    echo "DELETE FROM invite WHERE user = $i;"
+    # Kick from lobby
+    echo "DELETE FROM lobby WHERE user = $i;"
+done
+echo "COMMIT;"
+echo "-- Remember to back up your database before you execute!"
