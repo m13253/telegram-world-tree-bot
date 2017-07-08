@@ -145,6 +145,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 		fwd := tgbotapi.NewForward(dest, msg.Chat.ID, msg.MessageID)
 		fwd.DisableNotification = disable_notification
 		existing_replies = append(existing_replies, fwd)
+		return existing_replies
 	}
 	if msg.Text != "" {
 		var text string
