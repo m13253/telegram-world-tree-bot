@@ -406,6 +406,9 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 			tgbotapi.NewMessage(user_a, text),
 			tgbotapi.NewMessage(user_b, text),
 		}, nil)
+
+		err = bot.broadcastMatch(topic, user_a, user_b)
+		if err != nil { bot.replyError(err, msg, true) }
 	}
 }
 
@@ -429,6 +432,25 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 			"\n" +
 			topic)
 		reply.ReplyMarkup = reply_markup
+		reply.DisableNotification = true
+		replies = append(replies, reply)
+	}
+	bot.queue.Send(QUEUE_PRIORITY_LOW, replies, nil)
+	return nil
+}
+
+func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_b int64) error {
+	users, err := bot.dbm.ListUnmatchedUsers()
+	if err != nil { return err }
+	replies := make([]tgbotapi.Chattable, 0, len(users))
+	for i := range users {
+		if users[i] == exclude_user_a || users[i] == exclude_user_b {
+			continue
+		}
+		reply := tgbotapi.NewMessage(users[i],
+			"【私聊已配对】\n" +
+			"\n" +
+			topic)
 		reply.DisableNotification = true
 		replies = append(replies, reply)
 	}
