@@ -67,7 +67,7 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 			"你也可以输入 /new 来建立一对一的私聊。\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"若要离开世界树，请戳 /disconnect 。\n" +
+			"若要彻底离开世界树，请戳 /disconnect 。\n" +
 			"请友善待人，遵守道德和法律。",
 			user_hash, chat + lobby, lobby), msg)
 		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
@@ -100,7 +100,7 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		"你也可以输入 /new 来建立一对一的私聊。\n" +
 		"\n" +
 		"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-		"若要离开世界树，请戳 /disconnect 。\n" +
+		"若要彻底离开世界树，请戳 /disconnect 。\n" +
 		"请友善待人，遵守道德和法律。",
 		user_hash, chat + lobby, lobby), msg)
 	if !IsOpenHour(time.Now()) && !DEBUG_MODE {
@@ -301,8 +301,7 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 			"本次谈话已结束，你已回到大厅。\n" +
 			"如果喜欢的话，请推荐世界树 @WorldTreeBot 给朋友。人多才会好玩哩！\n" +
 			"\n" +
-			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"若要离开世界树，请戳 /disconnect 。",
+			"当前有 %d 人连接到世界树，其中 %d 人在大厅。",
 			chat + lobby, lobby), msg)
 		bot.sendTopicList(user_a,
 			"「世界树」\n" +
@@ -345,7 +344,7 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 			"「世界树」\n" +
 			"\n" +
 			"你已经在大厅了。\n" +
-			"若要断开与世界树的连接，请戳 /disconnect 。",
+			"若要彻底离开世界树，请戳 /disconnect 。",
 			msg)
 		return
 	}
