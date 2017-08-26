@@ -45,8 +45,8 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"你正在一次会话中。\n" +
-			"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+			"你正在一对一私聊中。\n" +
+			"要继续操作的话，请戳 /leave 回到大厅。",
 			msg)
 		return
 	}
@@ -62,9 +62,9 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 			"欢迎使用「世界树」！\n" +
 			"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 			"\n" +
-			"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
-			"你今天的群聊身份为 [%s]，每日自动更换。\n" +
-			"你也可以输入 /new 来建立一对一的私聊。\n" +
+			"世界树有两种聊天模式：大厅群聊、一对一私聊\n" +
+			"现在正在大厅群聊，你今天的 ID 是 [%s]。\n" +
+			"要建立一对一的私聊，请戳 /new 。\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 			"若要彻底离开世界树，请戳 /disconnect 。\n" +
@@ -95,9 +95,9 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		"欢迎使用「世界树」！\n" +
 		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
 		"\n" +
-		"你已进入大厅。在这里，你可以进行匿名群聊。\n" +
-		"你今天的群聊身份为 [%s]，每日自动更换。\n" +
-		"你也可以输入 /new 来建立一对一的私聊。\n" +
+		"世界树有两种聊天模式：大厅群聊、一对一私聊\n" +
+		"现在正在大厅群聊，你今天的 ID 是 [%s]。\n" +
+		"要建立一对一的私聊，请戳 /new 。\n" +
 		"\n" +
 		"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
 		"若要彻底离开世界树，请戳 /disconnect 。\n" +
@@ -137,8 +137,8 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"你正在一次会话中。\n" +
-			"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+			"你正在一对一私聊中。\n" +
+			"要继续操作的话，请戳 /leave 回到大厅。",
 			msg)
 		return
 	}
@@ -158,7 +158,7 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 				"\n" +
 				"你发布了：%s\n" +
 				"\n" +
-				"请等待世界树配对另一个人。\n" +
+				"请等待有人回应你。\n" +
 				"或戳 /list 看看还有哪些别的话题。",
 				msg)
 		} else {
@@ -175,9 +175,58 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 			bot.askReply(
 				"「世界树」\n" +
 				"\n" +
-				"接下来，请发布一句话题：",
+				"接下来，请输入一句话题，等待有人回应：",
 				msg)
 		}
+		return
+	}
+
+	bot.quickReply(
+		"「世界树」\n" +
+		"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
+		"\n" +
+		"你尚未连接到世界树。\n" +
+		"何不戳一下 /start 试试看？",
+		msg)
+}
+
+func (bot *Bot) handleNick(msg *tgbotapi.Message) {
+	user_a := msg.Chat.ID
+
+	// Detect whether the user is typing topic.
+	ok, err := bot.dbm.IsUserTypingTopic(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		err = bot.dbm.RemoveInvitation(user_a)
+		if err != nil { bot.replyError(err, msg, false) }
+		// fall-through
+	}
+
+	// Detect whether the user is in chat.
+	ok, err = bot.dbm.IsUserInChat(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		user_hash := bot.hashIdentification(msg.Chat)
+		bot.quickReply(fmt.Sprintf(
+			"「世界树」\n" +
+			"\n" +
+			"你今天在大厅的 ID 是 [%s]\n" +
+			"北京时间 3:00 会自动更新。",
+			user_hash), msg)
+		return
+	}
+
+	// Detect whether the user is in lobby.
+	ok, err = bot.dbm.IsUserInLobby(user_a)
+	if err != nil { bot.replyError(err, msg, true) }
+	if ok {
+		user_hash := bot.hashIdentification(msg.Chat)
+		bot.quickReply(fmt.Sprintf(
+			"「世界树」\n" +
+			"\n" +
+			"你今天在大厅的 ID 是 [%s]\n" +
+			"北京时间 3:00 会自动更新。",
+			user_hash), msg)
 		return
 	}
 
@@ -212,7 +261,7 @@ func (bot *Bot) handleList(msg *tgbotapi.Message) {
 			"「世界树」\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"以下这些是大厅内的私聊邀请：",
+			"以下这些是私聊邀请：",
 			chat + lobby, lobby))
 		if err != nil { bot.replyError(err, msg, true) }
 		if num_topics == 0 {
@@ -236,7 +285,7 @@ func (bot *Bot) handleList(msg *tgbotapi.Message) {
 			"「世界树」\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。\n" +
-			"以下这些是大厅内的私聊邀请，\n" +
+			"以下这些是私聊邀请，\n" +
 			"点击感兴趣的话题即可立刻开始私聊。\n" +
 			"\n" +
 			"你也可以输入 /new 来自定义话题。",
@@ -298,7 +347,7 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 		bot.quickReply(fmt.Sprintf(
 			"「世界树」\n" +
 			"\n" +
-			"本次谈话已结束，你已回到大厅。\n" +
+			"本次私聊已结束，你已回到大厅。\n" +
 			"如果喜欢的话，请推荐世界树 @WorldTreeBot 给朋友。人多才会好玩哩！\n" +
 			"\n" +
 			"当前有 %d 人连接到世界树，其中 %d 人在大厅。",
@@ -313,7 +362,7 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 			reply := tgbotapi.NewMessage(user_b,
 				"「世界树」\n" +
 				"\n" +
-				"对方结束了本次谈话。\n" +
+				"对方结束了本次私聊。\n" +
 				"戳 /leave 回到大厅。")
 			_, err = bot.api.Send(reply)
 			if err != nil { bot.replyError(err, msg, true) }
@@ -343,8 +392,8 @@ func (bot *Bot) handleLeave(msg *tgbotapi.Message) {
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"你已经在大厅了。\n" +
-			"若要彻底离开世界树，请戳 /disconnect 。",
+			"你已经在大厅了,和大家一起聊天呗。\n" +
+			"不过，若要彻底离开世界树，请戳 /disconnect 。",
 			msg)
 		return
 	}
@@ -377,8 +426,8 @@ func (bot *Bot) handleDisconnect(msg *tgbotapi.Message) {
 		bot.quickReply(
 			"「世界树」\n" +
 			"\n" +
-			"你正在一次会话中。\n" +
-			"先戳 /leave 离开本次谈话。",
+			"你正在一对一私聊中。\n" +
+			"要继续操作的话，请戳 /leave 回到大厅。",
 			msg)
 		return
 	}
@@ -425,7 +474,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			bot.askReply(
 				"「世界树」\n" +
 				"\n" +
-				"接下来，请发布一句话题：",
+				"接下来，请发布一句话题，等待有人回应：",
 				msg)
 			return
 		}
@@ -440,7 +489,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			"\n" +
 			"你发布了：%s\n" +
 			"\n" +
-			"请等待世界树配对另一个人。\n" +
+			"请等待有人回应你。\n" +
 			"或戳 /list 看看还有哪些别的话题。",
 			msg)
 		return
@@ -458,8 +507,8 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			bot.quickReply(
 				"「世界树」\n" +
 				"\n" +
-				"对方结束了本次谈话，你的消息未送达。\n" +
-				"戳 /leave 回到大厅。",
+				"对方提前结束了本次私聊，你的消息未送达。\n" +
+				"要继续操作的话，请戳 /leave 回到大厅。",
 				msg)
 			return
 		}
@@ -469,7 +518,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 				"「世界树」\n" +
 				"\n" +
 				"本服务不保留聊天记录，故无法追踪过去的消息。\n" +
-				"由于这个限制，你无法使用定向回复功能。",
+				"由于这个限制，你无法使用定向回复功能。十分抱歉。",
 				msg)
 		}
 
@@ -647,8 +696,8 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 			bot.quickReply(
 				"「世界树」\n" +
 				"\n" +
-				"你正在一次会话中。\n" +
-				"先戳 /leave 离开本次谈话，才能开始下一个会话。",
+				"你正在一对一私聊中。\n" +
+				"要继续操作的话，请戳 /leave 回到大厅。",
 				msg)
 			return
 		} else {
@@ -668,7 +717,7 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		"\n" +
 		"正在加入话题：%s\n" +
 		"\n" +
-		"请等待世界树配对另一个人。\n" +
+		"请等待有人回应你。\n" +
 		"或戳 /list 看看还有哪些别的话题。",
 		msg)
 }
