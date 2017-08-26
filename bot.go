@@ -78,6 +78,8 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 			bot.handleStart(msg)
 		} else if cmd == "new" {
 			bot.handleNew(msg)
+		} else if cmd == "nick" {
+			bot.handleNick(msg)
 		} else if cmd == "list" {
 			bot.handleList(msg)
 		} else if cmd == "leave" {
