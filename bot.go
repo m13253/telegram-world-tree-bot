@@ -474,7 +474,7 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 }
 
 func (bot *Bot) hashIdentification(chat *tgbotapi.Chat) string {
-	date_seed := (time.Now().Unix() + 13 * 3600) / 86400
+	date_seed := (time.Now().Unix() + 5 * 3600) / 86400
 	hash_sum := sha1.Sum([]byte(fmt.Sprintf("%s %x %x %s %x %s %x", SECRET, chat.ID, len(chat.FirstName), chat.FirstName, len(chat.LastName), chat.LastName, date_seed)))
 	return base64.RawURLEncoding.EncodeToString(hash_sum[:6])
 }
