@@ -100,7 +100,7 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 			"「世界树」\n" +
 			"\n" +
 			"本服务不保留聊天记录，故无法追踪消息编辑状态。\n" +
-			"由于这个限制，你无法使用消息编辑功能。",
+			"由于这个限制，你无法使用消息编辑功能。十分抱歉。",
 			edit_msg)
 	}
 
