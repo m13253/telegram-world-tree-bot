@@ -37,16 +37,18 @@ type Bot struct {
 }
 
 func NewBot(api *tgbotapi.BotAPI, dbm *dbManager) (bot *Bot, err error) {
-	bot = &Bot {
-		api:        api,
-		dbm:        dbm,
-		queue:      NewSendQueue(api),
+	bot = &Bot{
+		api:   api,
+		dbm:   dbm,
+		queue: NewSendQueue(api),
 	}
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	bot.updates, err = api.GetUpdatesChan(u)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -62,9 +64,18 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 		if r := recover(); r != nil {
 			log.Printf("Fatal: %+v\n", r)
 		}
-	} ()
+	}()
 
 	msg := update.Message
+	ok, err := bot.dbm.IsUserInBanList(msg.Chat.ID)
+	if err != nil {
+		bot.replyError(err, msg, true)
+	}
+	if ok {
+		bot.quickReply(`你已被拉黑`, msg)
+		return
+	}
+
 	if msg != nil && msg.Chat.IsPrivate() {
 
 		if strings.HasPrefix(msg.Text, "/") {
@@ -97,10 +108,10 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 	edit_msg := update.EditedMessage
 	if edit_msg != nil && edit_msg.Chat.IsPrivate() {
 		bot.quickReply(
-			"「世界树」\n" +
-			"\n" +
-			"本服务不保留聊天记录，故无法追踪消息编辑状态。\n" +
-			"由于这个限制，你无法使用消息编辑功能。十分抱歉。",
+			"「世界树」\n"+
+				"\n"+
+				"本服务不保留聊天记录，故无法追踪消息编辑状态。\n"+
+				"由于这个限制，你无法使用消息编辑功能。十分抱歉。",
 			edit_msg)
 	}
 
@@ -115,11 +126,11 @@ func (bot *Bot) quickReply(text string, msg *tgbotapi.Message) {
 	if msg != nil {
 		reply.ReplyToMessageID = msg.MessageID
 	}
-	reply.ReplyMarkup = tgbotapi.ForceReply {
+	reply.ReplyMarkup = tgbotapi.ForceReply{
 		ForceReply: false,
 	}
 	reply.DisableWebPagePreview = true
-	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable{reply}, nil)
 }
 
 func (bot *Bot) askReply(text string, msg *tgbotapi.Message) {
@@ -127,12 +138,12 @@ func (bot *Bot) askReply(text string, msg *tgbotapi.Message) {
 	if msg != nil {
 		reply.ReplyToMessageID = msg.MessageID
 	}
-	reply.ReplyMarkup = tgbotapi.ForceReply {
+	reply.ReplyMarkup = tgbotapi.ForceReply{
 		ForceReply: true,
-		Selective: true,
+		Selective:  true,
 	}
 	reply.DisableWebPagePreview = true
-	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable{reply}, nil)
 }
 
 func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, dest int64, nick string, msg *tgbotapi.Message, disable_notification bool) []tgbotapi.Chattable {
@@ -140,7 +151,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	has_nick := nick != ""
 	if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -162,7 +173,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Audio != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -202,7 +213,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Sticker != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -225,7 +236,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.VideoNote != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -249,7 +260,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Contact != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -260,7 +271,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Location != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "[" + nick + "]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -314,7 +325,7 @@ func (bot *Bot) sendBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
 	reply.DisableNotification = true
 	reply.ReplyToMessageID = msg.MessageID
-	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable{reply}, nil)
 }
 
 func (bot *Bot) logBroadcastResult(msg_errors []error, msg *tgbotapi.Message) {
@@ -345,52 +356,66 @@ func (bot *Bot) sendTopicList(user int64, caption string) (count int, err error)
 	reply := tgbotapi.NewMessage(user, caption)
 	keyboard := make([][]tgbotapi.InlineKeyboardButton, count)
 	for i := 0; i < count; i++ {
-		keyboard[i] = []tgbotapi.InlineKeyboardButton {
-			tgbotapi.InlineKeyboardButton {
-				Text: topics[i],
+		keyboard[i] = []tgbotapi.InlineKeyboardButton{
+			tgbotapi.InlineKeyboardButton{
+				Text:         topics[i],
 				CallbackData: &topics[i],
 			},
 		}
 	}
 	reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
-	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable { reply }, nil)
+	bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable{reply}, nil)
 	return
 }
 
 func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, success_text string, wait_text string, msg *tgbotapi.Message) {
 	user_b, err := bot.dbm.QueryInvitation(short_topic)
-	if err != nil { bot.replyError(err, msg, true) }
+	if err != nil {
+		bot.replyError(err, msg, true)
+	}
 	if user_b == 0 || user_b == user_a {
 		// The topic has gone.
 		if !IsOpenHour(time.Now()) && !DEBUG_MODE {
 			bot.quickReply(
-				"「世界树」\n" +
-				"——长夜漫漫，随便找个人，陪你聊到天亮。\n" +
-				"\n" +
-				"\u274c " + CLOSED_MSG,
+				"「世界树」\n"+
+					"——长夜漫漫，随便找个人，陪你聊到天亮。\n"+
+					"\n"+
+					"\u274c "+ CLOSED_MSG,
 				msg)
 			return
 		}
 
 		err = bot.dbm.NewInvitation(user_a, short_topic)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 		bot.quickReply(fmt.Sprintf(wait_text, topic), msg)
 		if user_b == 0 {
 			err = bot.broadcastInvitation(topic, topic, user_a)
-			if err != nil { bot.replyError(err, msg, true) }
+			if err != nil {
+				bot.replyError(err, msg, true)
+			}
 		}
 	} else {
 		err = bot.dbm.RemoveInvitationByTopic(topic)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 		err = bot.dbm.LeaveLobby(user_a)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 		err = bot.dbm.LeaveLobby(user_b)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 
 		bot.quickReply(fmt.Sprintf(success_text, topic), msg)
 
 		err = bot.dbm.ConnectChat(user_a, user_b)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 
 		text := "「世界树」\n" +
 			"\n" +
@@ -404,23 +429,27 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 		} else {
 			text += "注：接下来的聊天内容不会被记录，管理员无法读取，但请友善待人，不要分享机密信息。"
 		}
-		bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable {
+		bot.queue.Send(QUEUE_PRIORITY_HIGH, []tgbotapi.Chattable{
 			tgbotapi.NewMessage(user_a, text),
 			tgbotapi.NewMessage(user_b, text),
 		}, nil)
 
 		err = bot.broadcastMatch(topic, user_a, user_b)
-		if err != nil { bot.replyError(err, msg, true) }
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
 	}
 }
 
 func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_user int64) error {
 	users, err := bot.dbm.ListUnmatchedUsers()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	reply_markup := tgbotapi.NewInlineKeyboardMarkup(
-		[]tgbotapi.InlineKeyboardButton {
-			tgbotapi.InlineKeyboardButton {
-				Text: "\u2764\ufe0f 加入",
+		[]tgbotapi.InlineKeyboardButton{
+			tgbotapi.InlineKeyboardButton{
+				Text:         "\u2764\ufe0f 加入",
 				CallbackData: &short_topic,
 			},
 		})
@@ -430,9 +459,9 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 			continue
 		}
 		reply := tgbotapi.NewMessage(users[i],
-			"【新私聊邀请】\n" +
-			"\n" +
-			topic)
+			"【新私聊邀请】\n"+
+				"\n"+
+				topic)
 		reply.ReplyMarkup = reply_markup
 		reply.DisableNotification = true
 		replies = append(replies, reply)
@@ -443,16 +472,18 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 
 func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_b int64) error {
 	users, err := bot.dbm.ListUnmatchedUsers()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	replies := make([]tgbotapi.Chattable, 0, len(users))
 	for i := range users {
 		if users[i] == exclude_user_a || users[i] == exclude_user_b {
 			continue
 		}
 		reply := tgbotapi.NewMessage(users[i],
-			"【私聊已配对】\n" +
-			"\n" +
-			topic)
+			"【私聊已配对】\n"+
+				"\n"+
+				topic)
 		reply.DisableNotification = true
 		replies = append(replies, reply)
 	}
@@ -463,9 +494,9 @@ func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_
 func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 	if err != nil {
 		bot.quickReply(
-			"「世界树」\n" +
-			"\n" +
-			"程序发生了错误，刚刚的消息可能没有送达。",
+			"「世界树」\n"+
+				"\n"+
+				"程序发生了错误，刚刚的消息可能没有送达。",
 			msg)
 		if fatal {
 			panic(err)
@@ -476,7 +507,7 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 }
 
 func (bot *Bot) hashIdentification(chat *tgbotapi.Chat) string {
-	date_seed := (time.Now().Unix() + 5 * 3600) / 86400
+	date_seed := (time.Now().Unix() + 5*3600) / 86400
 	hash_sum := sha1.Sum([]byte(fmt.Sprintf("%s %x %x %s %x %s %x", SECRET, chat.ID, len(chat.FirstName), chat.FirstName, len(chat.LastName), chat.LastName, date_seed)))
 	return base64.RawURLEncoding.EncodeToString(hash_sum[:6])
 }
