@@ -30,13 +30,13 @@ import (
 )
 
 type sendQueueItem struct {
-	priority    int
-	msg_config  []tgbotapi.Chattable
-	msg_result  []*tgbotapi.Message
-	msg_errors  []error
-	msg_index   int
-	msg_finish  uintptr
-	callback    func ([]*tgbotapi.Message, []error)
+	priority   int
+	msg_config []tgbotapi.Chattable
+	msg_result []*tgbotapi.Message
+	msg_errors []error
+	msg_index  int
+	msg_finish uintptr
+	callback   func([]*tgbotapi.Message, []error)
 }
 
 const (
@@ -46,16 +46,16 @@ const (
 )
 
 type sendQueue struct {
-	bot         *tgbotapi.BotAPI
-	lock        *sync.Mutex
-	cv          *sync.Cond
-	low         *list.List
-	normal      *list.List
-	high        *list.List
+	bot    *tgbotapi.BotAPI
+	lock   *sync.Mutex
+	cv     *sync.Cond
+	low    *list.List
+	normal *list.List
+	high   *list.List
 }
 
 func NewSendQueue(bot *tgbotapi.BotAPI) *sendQueue {
-	q := &sendQueue {
+	q := &sendQueue{
 		bot:    bot,
 		lock:   new(sync.Mutex),
 		cv:     sync.NewCond(new(sync.Mutex)),
@@ -67,8 +67,8 @@ func NewSendQueue(bot *tgbotapi.BotAPI) *sendQueue {
 	return q
 }
 
-func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback func ([]*tgbotapi.Message, []error)) {
-	item := &sendQueueItem {
+func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback func([]*tgbotapi.Message, []error)) {
+	item := &sendQueueItem{
 		priority:   priority,
 		msg_config: msg_config,
 		msg_result: make([]*tgbotapi.Message, len(msg_config)),
@@ -156,7 +156,7 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
 				item.callback(item.msg_result, item.msg_errors)
 			}
 		}
-	} ()
+	}()
 
 	<-delay
 }
