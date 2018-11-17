@@ -68,16 +68,16 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 	}()
 
 	msg := update.Message
-	ok, err := bot.dbm.IsUserInBanList(msg.Chat.ID)
-	if err != nil {
-		bot.replyError(err, msg, true)
-	}
-	if ok {
-		bot.quickReply(`你已被拉黑`, msg)
-		return
-	}
-
 	if msg != nil && msg.Chat.IsPrivate() {
+
+		ok, err := bot.dbm.IsUserInBanList(msg.Chat.ID)
+		if err != nil {
+			bot.replyError(err, msg, true)
+		}
+		if ok {
+			bot.quickReply(`你已被拉黑`, msg)
+			return
+		}
 
 		if strings.HasPrefix(msg.Text, "/") {
 			printLog(msg.From, msg.Text, false)
