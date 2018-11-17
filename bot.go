@@ -41,7 +41,7 @@ func NewBot(api *tgbotapi.BotAPI, dbm *dbManager) (bot *Bot, err error) {
 	bot = &Bot{
 		api:   api,
 		dbm:   dbm,
-		queue: NewSendQueue(api),
+		queue: NewSendQueue(api, dbm),
 	}
 
 	u := tgbotapi.NewUpdate(0)
