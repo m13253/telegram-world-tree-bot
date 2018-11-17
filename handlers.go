@@ -20,8 +20,9 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
+
 	// "gopkg.in/telegram-bot-api.v4"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -84,7 +85,7 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 			bot.quickReply(
 				"「世界树」\n"+
 					"\n"+
-					"\u274c "+ CLOSED_MSG,
+					"\u274c "+CLOSED_MSG,
 				msg)
 			return
 		}
@@ -121,7 +122,7 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 		bot.quickReply(
 			"「世界树」\n"+
 				"\n"+
-				"\u274c "+ CLOSED_MSG,
+				"\u274c "+CLOSED_MSG,
 			msg)
 		return
 	}
@@ -134,6 +135,7 @@ func (bot *Bot) handleStart(msg *tgbotapi.Message) {
 
 func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
+	user_a_nick := bot.hashIdentification(msg.Chat)
 
 	// Detect whether the user is typing topic.
 	ok, err := bot.dbm.IsUserTypingTopic(user_a)
@@ -172,7 +174,7 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 		topic := strings.TrimSpace(msg.CommandArguments())
 		if topic != "" {
 			short_topic := bot.limitTopic(topic)
-			bot.respondTopic(topic, short_topic, user_a,
+			bot.respondTopic(topic, short_topic, user_a, user_a_nick,
 				"「世界树」\n"+
 					"\n"+
 					"你发布了：%s",
@@ -188,7 +190,7 @@ func (bot *Bot) handleNew(msg *tgbotapi.Message) {
 				bot.quickReply(
 					"「世界树」\n"+
 						"\n"+
-						"\u274c "+ CLOSED_MSG,
+						"\u274c "+CLOSED_MSG,
 					msg)
 				return
 			}
@@ -545,6 +547,7 @@ func (bot *Bot) handleDisconnect(msg *tgbotapi.Message) {
 
 func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 	user_a := msg.Chat.ID
+	user_a_nick := bot.hashIdentification(msg.Chat)
 
 	// Detect whether the user is typing topic.
 	ok, err := bot.dbm.IsUserTypingTopic(user_a)
@@ -567,7 +570,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			bot.replyError(err, msg, true)
 		}
 		short_topic := bot.limitTopic(topic)
-		bot.respondTopic(topic, short_topic, user_a,
+		bot.respondTopic(topic, short_topic, user_a, user_a_nick,
 			"「世界树」\n"+
 				"\n"+
 				"你发布了：%s",
@@ -634,7 +637,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 				"「世界树」\n"+
 					"——长夜漫漫，随便找个人，陪你聊到天亮。\n"+
 					"\n"+
-					"\u274c "+ CLOSED_MSG,
+					"\u274c "+CLOSED_MSG,
 				msg)
 			return
 		}
@@ -664,7 +667,7 @@ func (bot *Bot) handleMessage(msg *tgbotapi.Message) {
 			if users[i] == user_a {
 				continue
 			}
-			replies = bot.generateForwardMessage(replies, users[i], bot.hashIdentification(msg.Chat), msg, true)
+			replies = bot.generateForwardMessage(replies, users[i], user_a_nick, msg, true)
 		}
 		bot.queue.Send(QUEUE_PRIORITY_LOW, replies, func(msg_result []*tgbotapi.Message, msg_errors []error) {
 			bot.logBroadcastResult(msg_errors, msg)
@@ -773,6 +776,7 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		return
 	}
 	user_a := msg.Chat.ID
+	user_a_nick := bot.hashIdentification(msg.Chat)
 
 	printLog(query.From, "(menu) "+query.Data, false)
 
@@ -829,7 +833,7 @@ func (bot *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		}
 	}
 
-	bot.respondTopic(topic, topic, user_a,
+	bot.respondTopic(topic, topic, user_a, user_a_nick,
 		"「世界树」\n"+
 			"\n"+
 			"正在加入话题：%s",

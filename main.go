@@ -19,9 +19,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
-	"database/sql"
+
 	// "gopkg.in/telegram-bot-api.v4"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	_ "github.com/mattn/go-sqlite3"

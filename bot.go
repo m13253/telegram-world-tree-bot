@@ -25,6 +25,7 @@ import (
 	"log"
 	"strings"
 	"time"
+
 	// "gopkg.in/telegram-bot-api.v4"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -151,7 +152,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	has_nick := nick != ""
 	if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -173,7 +174,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Audio != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -213,7 +214,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Sticker != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -236,7 +237,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.VideoNote != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -260,7 +261,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Contact != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -271,7 +272,7 @@ func (bot *Bot) generateForwardMessage(existing_replies []tgbotapi.Chattable, de
 	}
 	if msg.Location != nil {
 		if has_nick {
-			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]");
+			fwd_nick := tgbotapi.NewMessage(dest, "["+nick+"]")
 			fwd_nick.DisableNotification = disable_notification
 			existing_replies = append(existing_replies, fwd_nick)
 		}
@@ -368,7 +369,7 @@ func (bot *Bot) sendTopicList(user int64, caption string) (count int, err error)
 	return
 }
 
-func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, success_text string, wait_text string, msg *tgbotapi.Message) {
+func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, user_a_nick string, success_text string, wait_text string, msg *tgbotapi.Message) {
 	user_b, err := bot.dbm.QueryInvitation(short_topic)
 	if err != nil {
 		bot.replyError(err, msg, true)
@@ -380,7 +381,7 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 				"「世界树」\n"+
 					"——长夜漫漫，随便找个人，陪你聊到天亮。\n"+
 					"\n"+
-					"\u274c "+ CLOSED_MSG,
+					"\u274c "+CLOSED_MSG,
 				msg)
 			return
 		}
@@ -391,7 +392,7 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 		}
 		bot.quickReply(fmt.Sprintf(wait_text, topic), msg)
 		if user_b == 0 {
-			err = bot.broadcastInvitation(topic, topic, user_a)
+			err = bot.broadcastInvitation(topic, topic, user_a, user_a_nick)
 			if err != nil {
 				bot.replyError(err, msg, true)
 			}
@@ -434,14 +435,14 @@ func (bot *Bot) respondTopic(topic string, short_topic string, user_a int64, suc
 			tgbotapi.NewMessage(user_b, text),
 		}, nil)
 
-		err = bot.broadcastMatch(topic, user_a, user_b)
+		err = bot.broadcastMatch(topic, user_a, user_b, user_a_nick)
 		if err != nil {
 			bot.replyError(err, msg, true)
 		}
 	}
 }
 
-func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_user int64) error {
+func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_user int64, nick string) error {
 	users, err := bot.dbm.ListUnmatchedUsers()
 	if err != nil {
 		return err
@@ -461,7 +462,7 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 		reply := tgbotapi.NewMessage(users[i],
 			"【新私聊邀请】\n"+
 				"\n"+
-				topic)
+				"["+nick+"] "+topic)
 		reply.ReplyMarkup = reply_markup
 		reply.DisableNotification = true
 		replies = append(replies, reply)
@@ -470,7 +471,7 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 	return nil
 }
 
-func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_b int64) error {
+func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_b int64, nick string) error {
 	users, err := bot.dbm.ListUnmatchedUsers()
 	if err != nil {
 		return err
@@ -483,7 +484,7 @@ func (bot *Bot) broadcastMatch(topic string, exclude_user_a int64, exclude_user_
 		reply := tgbotapi.NewMessage(users[i],
 			"【私聊已配对】\n"+
 				"\n"+
-				topic)
+				"["+nick+"] "+topic)
 		reply.DisableNotification = true
 		replies = append(replies, reply)
 	}
@@ -515,7 +516,7 @@ func (bot *Bot) hashIdentification(chat *tgbotapi.Chat) string {
 func (bot *Bot) limitTopic(topic string) string {
 	if len(topic) > 64 {
 		last_i := 0
-		for i, _ := range topic {
+		for i := range topic {
 			if i > 60 {
 				return topic[:last_i] + "…"
 			}
