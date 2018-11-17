@@ -153,7 +153,7 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
 			chat_id := reflect_msg.FieldByName("ChatID").Interface()
 			log.Printf("Send to #%+v failed: %+v\n", chat_id, err)
 
-			if err.Error() == "bot was blocked by the user" || err.Error() == "user is deactivated" {
+			if err.Error() == "Forbidden: bot was blocked by the user" || err.Error() == "Forbidden: user is deactivated" {
 				if chat_id_int64, ok := chat_id.(int64); ok {
 					log.Printf("Removing #%+v from list\n", chat_id)
 					q.kickUser(chat_id_int64)
