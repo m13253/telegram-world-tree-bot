@@ -48,6 +48,10 @@ func (dbm *dbManager) CreateTables() (err error) {
 		return
 	}
 	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS chat (user_a INTEGER PRIMARY KEY, user_b INTEGER)")
+	if err != nil {
+		return
+	}
+	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS banlist (user INTEGER PRIMARY KEY)")
 	return
 }
 
