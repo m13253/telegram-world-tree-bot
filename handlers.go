@@ -23,8 +23,7 @@ import (
 	"strings"
 	"time"
 
-	// "gopkg.in/telegram-bot-api.v4"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 func (bot *Bot) handleStart(msg *tgbotapi.Message) {

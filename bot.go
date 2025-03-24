@@ -23,11 +23,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"strings"
 	"time"
 
-	// "gopkg.in/telegram-bot-api.v4"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 type Bot struct {
@@ -64,6 +64,7 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Fatal: %+v\n", r)
+			fmt.Println(string(debug.Stack()))
 		}
 	}()
 
@@ -124,9 +125,7 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 
 func (bot *Bot) quickReply(text string, msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
-	if msg != nil {
-		reply.ReplyToMessageID = msg.MessageID
-	}
+	reply.ReplyToMessageID = msg.MessageID
 	reply.ReplyMarkup = tgbotapi.ForceReply{
 		ForceReply: false,
 	}
@@ -136,9 +135,7 @@ func (bot *Bot) quickReply(text string, msg *tgbotapi.Message) {
 
 func (bot *Bot) askReply(text string, msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
-	if msg != nil {
-		reply.ReplyToMessageID = msg.MessageID
-	}
+	reply.ReplyToMessageID = msg.MessageID
 	reply.ReplyMarkup = tgbotapi.ForceReply{
 		ForceReply: true,
 		Selective:  true,
@@ -358,7 +355,7 @@ func (bot *Bot) sendTopicList(user int64, caption string) (count int, err error)
 	keyboard := make([][]tgbotapi.InlineKeyboardButton, count)
 	for i := 0; i < count; i++ {
 		keyboard[i] = []tgbotapi.InlineKeyboardButton{
-			tgbotapi.InlineKeyboardButton{
+			{
 				Text:         topics[i],
 				CallbackData: &topics[i],
 			},
@@ -449,7 +446,7 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 	}
 	reply_markup := tgbotapi.NewInlineKeyboardMarkup(
 		[]tgbotapi.InlineKeyboardButton{
-			tgbotapi.InlineKeyboardButton{
+			{
 				Text:         "\u2764\ufe0f 加入",
 				CallbackData: &short_topic,
 			},
@@ -503,6 +500,7 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 			panic(err)
 		} else {
 			log.Printf("Error: %+v\n", err)
+			log.Println(string(debug.Stack()))
 		}
 	}
 }
