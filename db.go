@@ -20,15 +20,16 @@ package main
 
 import (
 	"database/sql"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type dbManager struct {
-	db      *sql.DB
+	db *sql.DB
 }
 
 func NewDBManager(db *sql.DB) *dbManager {
-	return &dbManager {
+	return &dbManager{
 		db: db,
 	}
 }
@@ -47,6 +48,10 @@ func (dbm *dbManager) CreateTables() (err error) {
 		return
 	}
 	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS chat (user_a INTEGER PRIMARY KEY, user_b INTEGER)")
+	if err != nil {
+		return
+	}
+	_, err = dbm.db.Exec("CREATE TABLE IF NOT EXISTS banlist (user INTEGER PRIMARY KEY)")
 	return
 }
 
@@ -318,6 +323,15 @@ func (dbm *dbManager) IsUserInQueue(user int64) (ok bool, err error) {
 func (dbm *dbManager) IsUserAnAdmin(user int64) (ok bool, err error) {
 	var count int
 	err = dbm.db.QueryRow("SELECT count(*) FROM admin WHERE user = ?", user).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
+}
+
+func (dbm *dbManager) IsUserInBanList(user int64) (ok bool, err error) {
+	var count int
+	err = dbm.db.QueryRow("SELECT count(*) FROM banlist WHERE user = ?", user).Scan(&count)
 	if err != nil {
 		return false, err
 	}

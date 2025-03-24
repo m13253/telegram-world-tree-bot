@@ -25,18 +25,18 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	// "gopkg.in/telegram-bot-api.v4"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 type sendQueueItem struct {
-	priority    int
-	msg_config  []tgbotapi.Chattable
-	msg_result  []*tgbotapi.Message
-	msg_errors  []error
-	msg_index   int
-	msg_finish  uintptr
-	callback    func ([]*tgbotapi.Message, []error)
+	priority   int
+	msg_config []tgbotapi.Chattable
+	msg_result []*tgbotapi.Message
+	msg_errors []error
+	msg_index  int
+	msg_finish uintptr
+	callback   func([]*tgbotapi.Message, []error)
 }
 
 const (
@@ -46,17 +46,19 @@ const (
 )
 
 type sendQueue struct {
-	bot         *tgbotapi.BotAPI
-	lock        *sync.Mutex
-	cv          *sync.Cond
-	low         *list.List
-	normal      *list.List
-	high        *list.List
+	bot    *tgbotapi.BotAPI
+	dbm    *dbManager
+	lock   *sync.Mutex
+	cv     *sync.Cond
+	low    *list.List
+	normal *list.List
+	high   *list.List
 }
 
-func NewSendQueue(bot *tgbotapi.BotAPI) *sendQueue {
-	q := &sendQueue {
+func NewSendQueue(bot *tgbotapi.BotAPI, dbm *dbManager) *sendQueue {
+	q := &sendQueue{
 		bot:    bot,
+		dbm:    dbm,
 		lock:   new(sync.Mutex),
 		cv:     sync.NewCond(new(sync.Mutex)),
 		low:    list.New(),
@@ -67,8 +69,8 @@ func NewSendQueue(bot *tgbotapi.BotAPI) *sendQueue {
 	return q
 }
 
-func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback func ([]*tgbotapi.Message, []error)) {
-	item := &sendQueueItem {
+func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback func([]*tgbotapi.Message, []error)) {
+	item := &sendQueueItem{
 		priority:   priority,
 		msg_config: msg_config,
 		msg_result: make([]*tgbotapi.Message, len(msg_config)),
@@ -88,17 +90,14 @@ func (q *sendQueue) Send(priority int, msg_config []tgbotapi.Chattable, callback
 	default:
 		panic("Unknown priority")
 	}
-	log.Printf("[QueueSend] Begin")
 	q.lock.Lock()
 	msg_list.PushBack(item)
 	q.lock.Unlock()
 	q.cv.Signal()
-	log.Printf("[QueueSend] End")
 }
 
 func (q *sendQueue) dispatchMessages() {
 	for {
-		log.Printf("[QueueRecv] Begin")
 		q.lock.Lock()
 		if el := q.high.Front(); el != nil {
 			item := el.Value.(*sendQueueItem)
@@ -109,7 +108,6 @@ func (q *sendQueue) dispatchMessages() {
 				q.lock.Unlock()
 				q.dispatchMessage(item)
 			}
-			log.Printf("[QueueRecv] High")
 		} else if el := q.normal.Front(); el != nil {
 			item := el.Value.(*sendQueueItem)
 			if item.msg_index == len(item.msg_config) {
@@ -119,7 +117,6 @@ func (q *sendQueue) dispatchMessages() {
 				q.lock.Unlock()
 				q.dispatchMessage(item)
 			}
-			log.Printf("[QueueRecv] Normal")
 		} else if el := q.low.Front(); el != nil {
 			item := el.Value.(*sendQueueItem)
 			if item.msg_index == len(item.msg_config) {
@@ -129,14 +126,11 @@ func (q *sendQueue) dispatchMessages() {
 				q.lock.Unlock()
 				q.dispatchMessage(item)
 			}
-			log.Printf("[QueueRecv] Low")
 		} else {
-			log.Printf("[QueueRecv] Wait")
 			q.cv.L.Lock()
 			q.lock.Unlock()
 			q.cv.Wait()
 			q.cv.L.Unlock()
-			log.Printf("[QueueRecv] Wake")
 		}
 	}
 }
@@ -157,6 +151,13 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
 			reflect_msg := reflect.ValueOf(item.msg_config[i])
 			chat_id := reflect_msg.FieldByName("ChatID").Interface()
 			log.Printf("Send to #%+v failed: %+v\n", chat_id, err)
+
+			if err.Error() == "Forbidden: bot was blocked by the user" || err.Error() == "Forbidden: user is deactivated" {
+				if chat_id_int64, ok := chat_id.(int64); ok {
+					log.Printf("Removing #%+v from list\n", chat_id)
+					q.kickUser(chat_id_int64)
+				}
+			}
 		}
 
 		if int(atomic.AddUintptr(&item.msg_finish, 1)) == len(item.msg_config) {
@@ -164,7 +165,26 @@ func (q *sendQueue) dispatchMessage(item *sendQueueItem) {
 				item.callback(item.msg_result, item.msg_errors)
 			}
 		}
-	} ()
+	}()
 
 	<-delay
+}
+
+func (q *sendQueue) kickUser(user_a int64) {
+	if user_a == 0 {
+		log.Println("kickUser: user_a == 0")
+		return
+	}
+	err := q.dbm.RemoveInvitation(user_a)
+	if err != nil {
+		log.Println(err)
+	}
+	err = q.dbm.DisconnectChat(user_a, 0)
+	if err != nil {
+		log.Println(err)
+	}
+	err = q.dbm.LeaveLobby(user_a)
+	if err != nil {
+		log.Println(err)
+	}
 }
