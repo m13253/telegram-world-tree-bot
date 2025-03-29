@@ -64,7 +64,7 @@ func (bot *Bot) processUpdate(update *tgbotapi.Update) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Fatal: %+v\n", r)
-			fmt.Println(string(debug.Stack()))
+			debug.PrintStack()
 		}
 	}()
 
@@ -500,7 +500,7 @@ func (bot *Bot) replyError(err error, msg *tgbotapi.Message, fatal bool) {
 			panic(err)
 		} else {
 			log.Printf("Error: %+v\n", err)
-			log.Println(string(debug.Stack()))
+			debug.PrintStack()
 		}
 	}
 }
