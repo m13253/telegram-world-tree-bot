@@ -459,7 +459,9 @@ func (bot *Bot) broadcastInvitation(topic string, short_topic string, exclude_us
 		reply := tgbotapi.NewMessage(users[i],
 			"【新私聊邀请】\n"+
 				"\n"+
-				"["+nick+"] "+topic)
+				"["+nick+"] "+topic+"\n"+
+				"\n"+
+				"系统将会按顺序两两配对加入此话题的用户。")
 		reply.ReplyMarkup = reply_markup
 		reply.DisableNotification = true
 		replies = append(replies, reply)
