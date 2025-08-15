@@ -9,6 +9,8 @@ echo "BEGIN TRANSACTION;"
 for i in "$@"
 do
     user_a="${i#\#}"  # Strip out the prefix '#'
+    # Add to banlist
+    echo "INSERT INTO banlist (user) VALUES ($user_a);"
     # Kick from chat
     echo "UPDATE chat SET user_b = 0 WHERE user_a = $user_a;"
     echo "DELETE FROM chat WHERE user_a = $user_a;"
